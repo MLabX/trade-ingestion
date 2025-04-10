@@ -1,0 +1,184 @@
+{
+  "messageHeader": {
+    "messageId": "UUID-123e4567-e89b-12d3-a456-426614174000",
+    "messageType": "FIXED_INCOME_DERIVATIVE_TRADE",
+    "schemaVersion": "1.0",
+    "messageFormat": "JSON",
+    "createdTimestamp": "2025-04-10T10:00:00Z",
+    "sourceSystem": "FROST",
+    "destinationSystem": "MTS",
+    "sensitivityLevel": "CONFIDENTIAL",
+    "securityTags": {
+      "encryption": "AES256",
+      "maskPII": true,
+      "dataClassification": "Confidential"
+    }
+  },
+  "deal": {
+    "dealId": "IRS-20250410-00001",
+    "dealType": "InterestRateSwap",
+    "executionVenue": "OTC",
+    "tradeDate": "2025-04-10",
+    "valueDate": "2025-04-12",
+    "maturityDate": "2030-04-12",
+    "status": "CONFIRMED",
+    "isBackDated": false,
+    "bookingInfo": {
+      "books": [
+        {
+          "location": "Sydney",
+          "bookId": "FIC-IRSYD01"
+        }
+      ]
+    },
+    "trader": {
+      "id": "TR123",
+      "name": "Encrypted (AES256)",
+      "desk": "Rates-Sydney"
+    }
+  },
+  "counterparty": {
+    "entityId": "CP-987654",
+    "legalName": "Encrypted (AES256)",
+    "lei": "5493001KJTIIGC8Y1R12",
+    "jurisdiction": "AU",
+    "confidentialityPolicy": {
+      "requiresMasking": true,
+      "retentionDays": 3650
+    }
+  },
+  "legs": [
+    {
+      "legId": "L1",
+      "payOrReceive": "Pay",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Fixed",
+      "fixedRate": 0.0375,
+      "paymentFrequency": "P6M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    },
+    {
+      "legId": "L2",
+      "payOrReceive": "Receive",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Floating",
+      "floatingRateIndex": "BBSW",
+      "spread": 0.0015,
+      "resetFrequency": "P3M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    }
+  ],
+  "valuation": {
+    "modelId": "IRS-PV-Model-v1.4",
+    "priceSource": "Internal",
+    "valuationTimestamp": "2025-04-10T09:50:00Z",
+    "valuationCurrency": "AUD"
+  },
+  "riskMetrics": {
+    "npv": {
+      "value": 15200.55,
+      "currency": "AUD",
+      "precisionNote": "rounded to 2 decimals"
+    },
+    "pv01": {
+      "value": 112.7,
+      "currency": "AUD",
+      "precisionNote": "rounded to 1 decimal"
+    },
+    "dv01": {
+      "value": 95.3,
+      "currency": "AUD",
+      "precisionNote": "rounded to 1 decimal"
+    }
+  },
+  "regulatoryReporting": {
+    "reportingJurisdiction": "ASIC",
+    "actionType": "NEW",
+    "uti": "UTI-2038-ABCXYZ0987654321",
+    "reportingEntityLei": "5493001KJTIIGC8Y1R12",
+    "executionTimestamp": "2025-04-10T10:00:00Z",
+    "reportingCounterparty": "Self"
+  },
+  "lifecycleEvent": {
+    "eventType": "Initiation",
+    "effectiveDate": "2025-04-12",
+    "priorDealId": null
+  },
+  "externalReferences": {
+    "calypsoTradeId": "CP-00012345",
+    "blotterId": "BLOTT-IR-9123",
+    "externalSystemRefs": {
+      "clientSystem": "TRADE-0001",
+      "regulatorPortal": "REP-UTI-991"
+    }
+  },
+  "audit": {
+    "createdBy": {
+      "actorId": "trader_jdoe",
+      "actorType": "HUMAN"
+    },
+    "createdTimestamp": "2025-04-10T10:00:00Z",
+    "lastModifiedBy": {
+      "actorId": "compliance_bot",
+      "actorType": "SYSTEM"
+    },
+    "lastModifiedTimestamp": "2025-04-10T10:10:00Z",
+    "changeLog": [
+      {
+        "changedBy": {
+          "actorId": "jdoe",
+          "actorType": "HUMAN"
+        },
+        "changeTimestamp": "2025-04-10T10:01:00Z",
+        "changeType": "Trade Confirmation",
+        "comments": "Trade status confirmed",
+        "approvalId": "APR-10293"
+      }
+    ]
+  },
+  "dataSecurity": {
+    "fieldSecurityPolicies": [
+      {
+        "field": "trader.name",
+        "encryption": "AES256",
+        "accessRoles": [
+          "risk-analyst"
+        ],
+        "encryptionMode": "AES256-GCM"
+      },
+      {
+        "field": "counterparty.legalName",
+        "masking": "MASK_AT_REST",
+        "retentionDays": 3650
+      }
+    ]
+  },
+  "privacyPolicy": {
+    "fieldsWithPII": [
+      "trader.name",
+      "counterparty.legalName"
+    ],
+    "maskingPolicy": "MASK_AT_REST",
+    "retentionPeriodDays": 3650
+  },
+  "processingMetadata": {
+    "ingestionTimestamp": "2025-04-10T10:00:05Z",
+    "processingDurationMs": 430,
+    "sourceRegion": "ap-southeast-2",
+    "pipelineStage": "POST_TRADE_ENRICHMENT",
+    "processingNodeId": "node-syd-prod-01"
+  },
+  "customAttributes": {
+    "customTradeTag": "HEDGE_BOOK_01",
+    "clientStrategy": "RateHedge",
+    "bookingSource": "FXDESK_UI"
+  }
+}

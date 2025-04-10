@@ -44,20 +44,20 @@ public class DealIngestionServiceIntegrationTest {
 
         // Create a test deal
         now = LocalDateTime.now();
-        testDeal = Deal.createNew(
-            UUID.randomUUID(),
-            "DEAL-123",
-            "COUNTERPARTY-1",
-            "AAPL",
-            new BigDecimal("100"),
-            new BigDecimal("150.50"),
-            "USD",
-            "NEW",
-            1L,
-            now,
-            now,
-            now
-        );
+        testDeal = Deal.builder()
+            .dealId("DEAL-123")
+            .clientId("COUNTERPARTY-1")
+            .instrumentId("AAPL")
+            .quantity(new BigDecimal("100"))
+            .price(new BigDecimal("150.50"))
+            .currency("USD")
+            .status("NEW")
+            .version(1L)
+            .dealDate(now)
+            .createdAt(now)
+            .updatedAt(now)
+            .processedAt(now)
+            .build();
     }
 
     @Test
@@ -66,16 +66,16 @@ public class DealIngestionServiceIntegrationTest {
         Deal savedDeal = dealIngestionService.processDeal(testDeal);
 
         // Assert
-        assertNotNull(savedDeal.id());
-        assertEquals(testDeal.instrumentId(), savedDeal.instrumentId());
-        assertEquals(testDeal.quantity(), savedDeal.quantity());
-        assertEquals(testDeal.price(), savedDeal.price());
-        assertEquals(testDeal.status(), savedDeal.status());
+        assertNotNull(savedDeal.getId());
+        assertEquals(testDeal.getInstrumentId(), savedDeal.getInstrumentId());
+        assertEquals(testDeal.getQuantity(), savedDeal.getQuantity());
+        assertEquals(testDeal.getPrice(), savedDeal.getPrice());
+        assertEquals(testDeal.getStatus(), savedDeal.getStatus());
 
         // Verify it was saved to the database
-        Deal retrievedDeal = dealRepository.findById(savedDeal.id()).orElse(null);
+        Deal retrievedDeal = dealRepository.findById(savedDeal.getId()).orElse(null);
         assertNotNull(retrievedDeal);
-        assertEquals(savedDeal.instrumentId(), retrievedDeal.instrumentId());
+        assertEquals(savedDeal.getInstrumentId(), retrievedDeal.getInstrumentId());
     }
 
     @Test
@@ -84,12 +84,12 @@ public class DealIngestionServiceIntegrationTest {
         Deal savedDeal = dealIngestionService.processDeal(testDeal);
 
         // Act
-        Deal retrievedDeal = dealIngestionService.getDealById(savedDeal.id());
+        Deal retrievedDeal = dealIngestionService.getDealById(savedDeal.getId());
 
         // Assert
         assertNotNull(retrievedDeal);
-        assertEquals(savedDeal.id(), retrievedDeal.id());
-        assertEquals(savedDeal.instrumentId(), retrievedDeal.instrumentId());
+        assertEquals(savedDeal.getId(), retrievedDeal.getId());
+        assertEquals(savedDeal.getInstrumentId(), retrievedDeal.getInstrumentId());
     }
 
     @Test
@@ -98,20 +98,20 @@ public class DealIngestionServiceIntegrationTest {
         dealIngestionService.processDeal(testDeal);
 
         // Create another deal
-        Deal anotherDeal = Deal.createNew(
-            UUID.randomUUID(),
-            "DEAL-124",
-            "COUNTERPARTY-2",
-            "GOOGL",
-            new BigDecimal("200"),
-            new BigDecimal("2500.75"),
-            "USD",
-            "NEW",
-            1L,
-            now,
-            now,
-            now
-        );
+        Deal anotherDeal = Deal.builder()
+            .dealId("DEAL-124")
+            .clientId("COUNTERPARTY-2")
+            .instrumentId("GOOGL")
+            .quantity(new BigDecimal("200"))
+            .price(new BigDecimal("2500.75"))
+            .currency("USD")
+            .status("NEW")
+            .version(1L)
+            .dealDate(now)
+            .createdAt(now)
+            .updatedAt(now)
+            .processedAt(now)
+            .build();
         dealIngestionService.processDeal(anotherDeal);
 
         // Act
@@ -128,20 +128,20 @@ public class DealIngestionServiceIntegrationTest {
         dealIngestionService.processDeal(testDeal);
 
         // Create another deal with different symbol
-        Deal anotherDeal = Deal.createNew(
-            UUID.randomUUID(),
-            "DEAL-124",
-            "COUNTERPARTY-2",
-            "GOOGL",
-            new BigDecimal("200"),
-            new BigDecimal("2500.75"),
-            "USD",
-            "NEW",
-            1L,
-            now,
-            now,
-            now
-        );
+        Deal anotherDeal = Deal.builder()
+            .dealId("DEAL-124")
+            .clientId("COUNTERPARTY-2")
+            .instrumentId("GOOGL")
+            .quantity(new BigDecimal("200"))
+            .price(new BigDecimal("2500.75"))
+            .currency("USD")
+            .status("NEW")
+            .version(1L)
+            .dealDate(now)
+            .createdAt(now)
+            .updatedAt(now)
+            .processedAt(now)
+            .build();
         dealIngestionService.processDeal(anotherDeal);
 
         // Act
@@ -150,6 +150,6 @@ public class DealIngestionServiceIntegrationTest {
         // Assert
         assertNotNull(deals);
         assertEquals(1, deals.size());
-        assertEquals("AAPL", deals.get(0).instrumentId());
+        assertEquals("AAPL", deals.get(0).getInstrumentId());
     }
 } 

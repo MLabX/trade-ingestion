@@ -61,22 +61,22 @@ public class DealMessageListenerIntegrationTest {
     void testDealMessageProcessing() throws JMSException {
         // Convert deal to JSON
         String dealJson = String.format(
-            "{\"id\":\"%s\",\"dealId\":\"%s\",\"counterpartyId\":\"%s\"," +
-            "\"instrumentId\":\"%s\",\"quantity\":%s,\"price\":%s,\"currency\":\"%s\"," +
-            "\"status\":\"%s\",\"version\":%d,\"dealDate\":\"%s\",\"createdAt\":\"%s\",\"updatedAt\":\"%s\",\"processedAt\":\"%s\"}",
-            testDeal.id()
-            testDeal.dealId(),
-            testDeal.counterpartyId(),
-            testDeal.instrumentId(),
-            testDeal.quantity(),
-            testDeal.price(),
-            testDeal.currency(),
-            testDeal.status(),
-            testDeal.version(),
-            testDeal.dealDate(),
-            testDeal.createdAt(),
-            testDeal.updatedAt(),
-            testDeal.processedAt()
+            "{\"id\":\"%s\", \"dealId\":\"%s\", \"clientId\":\"%s\", " +
+            "\"instrumentId\":\"%s\", \"quantity\":%s, \"price\":%s, \"currency\":\"%s\", " +
+            "\"status\":\"%s\", \"version\":%d, \"dealDate\":\"%s\", \"createdAt\":\"%s\", \"updatedAt\":\"%s\", \"processedAt\":\"%s\"}",
+            testDeal.getId(),
+            testDeal.getDealId(),
+            testDeal.getClientId(),
+            testDeal.getInstrumentId(),
+            testDeal.getQuantity(),
+            testDeal.getPrice(),
+            testDeal.getCurrency(),
+            testDeal.getStatus(),
+            testDeal.getVersion(),
+            testDeal.getDealDate(),
+            testDeal.getCreatedAt(),
+            testDeal.getUpdatedAt(),
+            testDeal.getProcessedAt()
         );
 
         // Send the message to the queue
@@ -94,10 +94,10 @@ public class DealMessageListenerIntegrationTest {
         }
 
         // Verify the deal was saved
-        Deal savedDeal = dealRepository.findById(testDeal.id()).orElse(null);
+        Deal savedDeal = dealRepository.findById(testDeal.getId()).orElse(null);
         assertNotNull(savedDeal, "Deal should be saved in the database");
-        assertEquals(testDeal.instrumentId(), savedDeal.instrumentId(), "Instrument ID should match");
-        assertEquals(testDeal.quantity(), savedDeal.quantity(), "Quantity should match");
-        assertEquals(testDeal.price(), savedDeal.price(), "Price should match");
+        assertEquals(testDeal.getInstrumentId(), savedDeal.getInstrumentId(), "Instrument ID should match");
+        assertEquals(testDeal.getQuantity(), savedDeal.getQuantity(), "Quantity should match");
+        assertEquals(testDeal.getPrice(), savedDeal.getPrice(), "Price should match");
     }
 } 

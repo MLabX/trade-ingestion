@@ -18,10 +18,10 @@
     <description>Spring Boot-based deal ingestion system</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
         <solace.jms.version>10.19.0</solace.jms.version>
         <spring-boot.version>3.2.3</spring-boot.version>
-        <spring-cloud.version>2023.0.0</spring-cloud.version>
+        <spring-cloud.version>2023.0.3</spring-cloud.version>
         <resilience4j.version>2.2.0</resilience4j.version>
     </properties>
 
@@ -85,6 +85,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Spring Cloud Circuit Breaker -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+        </dependency>
+        
         <!-- Resilience4j -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>
@@ -168,6 +174,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>artemis-jms-client</artifactId>
+            <version>2.31.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
