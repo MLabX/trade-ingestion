@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deal-ingestion
+  labels:
+    app: deal-ingestion
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: deal-ingestion
+  template:
+    metadata:
+      labels:
+        app: deal-ingestion
+    spec:
+      containers:
+      - name: deal-ingestion
+        image: deal-ingestion-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "production"
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: deal-ingestion-config
+              key: db_host
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: deal-ingestion-config
+              key: db_port
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: deal-ingestion-config
+              key: db_name
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: deal-ingestion-secrets
+              key: db_user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: deal-ingestion-secrets
+              key: db_password
+        - name: SOLACE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: deal-ingestion-config
+              key: solace_host
+        - name: SOLACE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: deal-ingestion-secrets
+              key: solace_username
+        - name: SOLACE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: deal-ingestion-secrets
+              key: solace_password
+        - name: SOLACE_VPN
+          valueFrom:
+            configMapKeyRef:
+              name: deal-ingestion-config
+              key: solace_vpn
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deal-ingestion
+spec:
+  selector:
+    app: deal-ingestion
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
