@@ -1,0 +1,59 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Java sources
+*.java text diff=java
+*.gradle text
+*.groovy text
+*.scala text
+*.kt text
+*.kts text
+
+# Maven
+pom.xml text
+mvnw text
+.mvn/wrapper/maven-wrapper.jar binary
+
+# Shell scripts
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# YAML
+*.yml text
+*.yaml text
+
+# JSON
+*.json text
+
+# XML
+*.xml text
+*.xsd text
+*.dtd text
+
+# Properties
+*.properties text
+
+# Documentation
+*.md text diff=markdown
+*.txt text
+LICENSE text
+
+# Graphics
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.svg text
+
+# Docker
+Dockerfile text
+.dockerignore text
+
+# Kubernetes
+*.yaml text
+*.yml text
+
+# Exclude files from exporting
+.gitattributes export-ignore
+.gitignore export-ignore 
