@@ -5,7 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -18,13 +19,14 @@ public class DealIdGeneratorService {
     private static final long RETRY_DELAY_MS = 1000;
 
     private final String dealIdServiceUrl;
-    private final RestTemplate restTemplate;
+    private final WebClient webClient;
     private final ExecutorService executorService;
 
     public DealIdGeneratorService(
-            @Value("${deal.id.service.url:http://localhost:8082/api/deal-ids}") String dealIdServiceUrl) {
+            @Value("${deal.id.service.url:http://localhost:8082/api/deal-ids}") String dealIdServiceUrl,
+            WebClient webClient) {
         this.dealIdServiceUrl = dealIdServiceUrl;
-        this.restTemplate = new RestTemplate();
+        this.webClient = webClient;
         this.executorService = Executors.newFixedThreadPool(5);
     }
 
@@ -50,11 +52,12 @@ public class DealIdGeneratorService {
         while (attempts < MAX_RETRIES) {
             try {
                 logger.info("Requesting deal ID for counterparty: {}", counterpartyId);
-                String dealId = restTemplate.postForObject(
-                    dealIdServiceUrl,
-                    new DealIdRequest(counterpartyId),
-                    String.class
-                );
+                String dealId = webClient.post()
+                    .uri(dealIdServiceUrl)
+                    .bodyValue(new DealIdRequest(counterpartyId))
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
 
                 if (dealId == null || dealId.isEmpty()) {
                     throw new DealProcessingException("Received empty deal ID from service");

@@ -1,11 +1,13 @@
 package com.magiccode.tradeingestion.service;
 
+import com.magiccode.tradeingestion.exception.DealProcessingException;
 import com.magiccode.tradeingestion.model.Deal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,32 +18,39 @@ public class DealValidationService {
 
     public List<String> validateDeal(Deal deal) {
         List<String> errors = new ArrayList<>();
-
-        // Validate quantity
-        if (deal.getQuantity() == null || deal.getQuantity().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            errors.add("Quantity must be positive");
+        
+        // Validate notional amount
+        if (deal.getNotionalAmount() != null && 
+            deal.getNotionalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            errors.add("Notional amount must be greater than zero");
         }
-
-        // Validate price
-        if (deal.getPrice() == null || deal.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            errors.add("Price must be positive");
+        
+        // Validate instrument quantity
+        if (deal.getInstrumentQuantity() != null && 
+            deal.getInstrumentQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            errors.add("Instrument quantity must be greater than zero");
         }
-
-        // Validate counterparty
-        if (deal.getClientId() == null || deal.getClientId().trim().isEmpty()) {
-            errors.add("Client ID is required");
-        } else if (!isValidCounterparty(deal.getClientId())) {
-            errors.add("Invalid client ID: " + deal.getClientId());
+        
+        // Validate instrument price
+        if (deal.getInstrumentPrice() != null && 
+            deal.getInstrumentPrice().compareTo(BigDecimal.ZERO) < 0) {
+            errors.add("Instrument price cannot be negative");
         }
-
-        // Validate instrument
-        if (deal.getInstrumentId() == null || deal.getInstrumentId().trim().isEmpty()) {
-            errors.add("Instrument ID is required");
-        } else if (!isValidInstrument(deal.getInstrumentId())) {
-            errors.add("Invalid instrument ID: " + deal.getInstrumentId());
+        
+        // Validate settlement amount
+        if (deal.getInstrumentSettlementAmount() != null && 
+            deal.getInstrumentSettlementAmount().compareTo(BigDecimal.ZERO) < 0) {
+            errors.add("Settlement amount cannot be negative");
         }
-
+        
         return errors;
+    }
+    
+    public void validateDealOrThrow(Deal deal) {
+        List<String> errors = validateDeal(deal);
+        if (!errors.isEmpty()) {
+            throw new DealProcessingException("Deal validation failed: " + String.join(", ", errors));
+        }
     }
 
     @Cacheable(value = "counterparties", key = "#counterpartyId")

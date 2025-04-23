@@ -1,6 +1,7 @@
 package com.magiccode.tradeingestion.exception;
 
 public class DealProcessingException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
     
     public DealProcessingException(String message) {
         super(message);

@@ -1,73 +1,81 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: deal-ingestion
+  name: trade-ingestion
   labels:
-    app: deal-ingestion
+    app: trade-ingestion
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: deal-ingestion
+      app: trade-ingestion
   template:
     metadata:
       labels:
-        app: deal-ingestion
+        app: trade-ingestion
     spec:
       containers:
-      - name: deal-ingestion
-        image: deal-ingestion-service:latest
+      - name: trade-ingestion
+        image: trade-ingestion-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
         - name: SPRING_PROFILES_ACTIVE
-          value: "production"
+          valueFrom:
+            configMapKeyRef:
+              name: trade-ingestion-config
+              key: spring_profile
         - name: DB_HOST
           valueFrom:
             configMapKeyRef:
-              name: deal-ingestion-config
+              name: trade-ingestion-config
               key: db_host
         - name: DB_PORT
           valueFrom:
             configMapKeyRef:
-              name: deal-ingestion-config
+              name: trade-ingestion-config
               key: db_port
         - name: DB_NAME
           valueFrom:
-            configMapKeyRef:
-              name: deal-ingestion-config
+            secretKeyRef:
+              name: trade-ingestion-secrets
               key: db_name
         - name: DB_USER
           valueFrom:
             secretKeyRef:
-              name: deal-ingestion-secrets
+              name: trade-ingestion-secrets
               key: db_user
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: deal-ingestion-secrets
+              name: trade-ingestion-secrets
               key: db_password
         - name: SOLACE_HOST
           valueFrom:
             configMapKeyRef:
-              name: deal-ingestion-config
+              name: trade-ingestion-config
               key: solace_host
+        - name: SOLACE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: trade-ingestion-config
+              key: solace_port
+        - name: SOLACE_VPN
+          valueFrom:
+            configMapKeyRef:
+              name: trade-ingestion-config
+              key: solace_vpn
         - name: SOLACE_USERNAME
           valueFrom:
             secretKeyRef:
-              name: deal-ingestion-secrets
+              name: trade-ingestion-secrets
               key: solace_username
         - name: SOLACE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: deal-ingestion-secrets
+              name: trade-ingestion-secrets
               key: solace_password
-        - name: SOLACE_VPN
-          valueFrom:
-            configMapKeyRef:
-              name: deal-ingestion-config
-              key: solace_vpn
         resources:
           requests:
             memory: "512Mi"
@@ -91,10 +99,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: deal-ingestion
+  name: trade-ingestion
 spec:
   selector:
-    app: deal-ingestion
+    app: trade-ingestion
   ports:
   - port: 80
     targetPort: 8080

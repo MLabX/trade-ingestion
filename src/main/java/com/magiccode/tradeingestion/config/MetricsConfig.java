@@ -11,8 +11,13 @@ public class MetricsConfig {
 
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> metricsCommonTags() {
-        return registry -> registry.config()
-            .commonTags("application", "deal-ingestion-service");
+        return new MeterRegistryCustomizer<MeterRegistry>() {
+            @Override
+            public void customize(MeterRegistry registry) {
+                registry.config()
+                    .commonTags("application", "trade-ingestion-service");
+            }
+        };
     }
 
     @Bean

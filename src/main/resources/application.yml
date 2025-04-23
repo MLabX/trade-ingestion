@@ -1,8 +1,6 @@
 spring:
-  profiles:
-    active: local
   application:
-    name: deal-ingestion-service
+    name: trade-ingestion-service
 
   datasource:
     url: jdbc:postgresql://localhost:5432/deals

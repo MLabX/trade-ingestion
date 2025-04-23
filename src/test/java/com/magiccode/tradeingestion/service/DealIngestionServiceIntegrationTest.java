@@ -2,6 +2,7 @@ package com.magiccode.tradeingestion.service;
 
 import com.magiccode.tradeingestion.config.TestConfig;
 import com.magiccode.tradeingestion.model.Deal;
+import com.magiccode.tradeingestion.model.FixedIncomeDerivativeDeal;
 import com.magiccode.tradeingestion.repository.DealRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ public class DealIngestionServiceIntegrationTest {
     @Autowired
     private JmsTemplate jmsTemplate;
 
-    private Deal testDeal;
+    private FixedIncomeDerivativeDeal testDeal;
     private LocalDateTime now;
 
     @BeforeEach
@@ -44,20 +45,21 @@ public class DealIngestionServiceIntegrationTest {
 
         // Create a test deal
         now = LocalDateTime.now();
-        testDeal = Deal.builder()
-            .dealId("DEAL-123")
-            .clientId("COUNTERPARTY-1")
-            .instrumentId("AAPL")
-            .quantity(new BigDecimal("100"))
-            .price(new BigDecimal("150.50"))
-            .currency("USD")
-            .status("NEW")
-            .version(1L)
-            .dealDate(now)
-            .createdAt(now)
-            .updatedAt(now)
-            .processedAt(now)
-            .build();
+        testDeal = FixedIncomeDerivativeDeal.createNew(
+            FixedIncomeDerivativeDeal.class,
+            "DEAL-123",
+            "COUNTERPARTY-1",
+            "AAPL",
+            new BigDecimal("100"),
+            new BigDecimal("150.50"),
+            "USD"
+        );
+        testDeal.setStatus("NEW");
+        testDeal.setVersion(1L);
+        testDeal.setDealDate(now);
+        testDeal.setCreatedAt(now);
+        testDeal.setUpdatedAt(now);
+        testDeal.setProcessedAt(now);
     }
 
     @Test
@@ -84,7 +86,7 @@ public class DealIngestionServiceIntegrationTest {
         Deal savedDeal = dealIngestionService.processDeal(testDeal);
 
         // Act
-        Deal retrievedDeal = dealIngestionService.getDealById(savedDeal.getId());
+        Deal retrievedDeal = dealIngestionService.getDealById(savedDeal.getId()).orElse(null);
 
         // Assert
         assertNotNull(retrievedDeal);
@@ -98,20 +100,21 @@ public class DealIngestionServiceIntegrationTest {
         dealIngestionService.processDeal(testDeal);
 
         // Create another deal
-        Deal anotherDeal = Deal.builder()
-            .dealId("DEAL-124")
-            .clientId("COUNTERPARTY-2")
-            .instrumentId("GOOGL")
-            .quantity(new BigDecimal("200"))
-            .price(new BigDecimal("2500.75"))
-            .currency("USD")
-            .status("NEW")
-            .version(1L)
-            .dealDate(now)
-            .createdAt(now)
-            .updatedAt(now)
-            .processedAt(now)
-            .build();
+        FixedIncomeDerivativeDeal anotherDeal = FixedIncomeDerivativeDeal.createNew(
+            FixedIncomeDerivativeDeal.class,
+            "DEAL-124",
+            "COUNTERPARTY-2",
+            "GOOGL",
+            new BigDecimal("200"),
+            new BigDecimal("2500.75"),
+            "USD"
+        );
+        anotherDeal.setStatus("NEW");
+        anotherDeal.setVersion(1L);
+        anotherDeal.setDealDate(now);
+        anotherDeal.setCreatedAt(now);
+        anotherDeal.setUpdatedAt(now);
+        anotherDeal.setProcessedAt(now);
         dealIngestionService.processDeal(anotherDeal);
 
         // Act
@@ -128,20 +131,21 @@ public class DealIngestionServiceIntegrationTest {
         dealIngestionService.processDeal(testDeal);
 
         // Create another deal with different symbol
-        Deal anotherDeal = Deal.builder()
-            .dealId("DEAL-124")
-            .clientId("COUNTERPARTY-2")
-            .instrumentId("GOOGL")
-            .quantity(new BigDecimal("200"))
-            .price(new BigDecimal("2500.75"))
-            .currency("USD")
-            .status("NEW")
-            .version(1L)
-            .dealDate(now)
-            .createdAt(now)
-            .updatedAt(now)
-            .processedAt(now)
-            .build();
+        FixedIncomeDerivativeDeal anotherDeal = FixedIncomeDerivativeDeal.createNew(
+            FixedIncomeDerivativeDeal.class,
+            "DEAL-124",
+            "COUNTERPARTY-2",
+            "GOOGL",
+            new BigDecimal("200"),
+            new BigDecimal("2500.75"),
+            "USD"
+        );
+        anotherDeal.setStatus("NEW");
+        anotherDeal.setVersion(1L);
+        anotherDeal.setDealDate(now);
+        anotherDeal.setCreatedAt(now);
+        anotherDeal.setUpdatedAt(now);
+        anotherDeal.setProcessedAt(now);
         dealIngestionService.processDeal(anotherDeal);
 
         // Act

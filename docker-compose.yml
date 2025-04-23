@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  solace:
+    image: solace/solace-pubsub-standard:latest
+    container_name: solace
+    ports:
+      - "55555:55555"  # SMF
+      - "8080:8080"    # SEMP
+      - "8008:8008"    # REST
+    environment:
+      - username_admin_globalaccesslevel=admin
+      - username_admin_password=admin
+    volumes:
+      - solace-data:/var/lib/solace
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/SEMP"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  solace-data: 

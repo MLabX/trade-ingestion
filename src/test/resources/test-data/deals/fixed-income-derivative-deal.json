@@ -1,0 +1,102 @@
+{
+  "messageHeader": {
+    "messageId": "UUID-123e4567-e89b-12d3-a456-426614174000",
+    "messageType": "FIXED_INCOME_DERIVATIVE_TRADE",
+    "schemaVersion": "1.0",
+    "messageFormat": "JSON",
+    "createdTimestamp": "2024-03-20T10:00:00Z",
+    "sourceSystem": "FROST",
+    "destinationSystem": "MTS",
+    "sensitivityLevel": "CONFIDENTIAL",
+    "securityTags": {
+      "encryption": "AES256",
+      "maskPII": true,
+      "dataClassification": "Confidential"
+    }
+  },
+  "deal": {
+    "dealId": "FID-123",
+    "dealType": "InterestRateSwap",
+    "executionVenue": "OTC",
+    "tradeDate": "2024-03-20",
+    "valueDate": "2024-03-22",
+    "maturityDate": "2029-03-20",
+    "status": "NEW",
+    "isBackDated": false,
+    "bookingInfo": {
+      "books": [
+        {
+          "location": "Sydney",
+          "bookId": "FIC-IRSYD01"
+        }
+      ]
+    },
+    "trader": {
+      "id": "TR123",
+      "name": "Encrypted (AES256)",
+      "desk": "Rates-Sydney"
+    }
+  },
+  "counterparty": {
+    "entityId": "CP-987654",
+    "legalName": "Encrypted (AES256)",
+    "lei": "5493001KJTIIGC8Y1R12",
+    "jurisdiction": "AU",
+    "confidentialityPolicy": {
+      "requiresMasking": true,
+      "retentionDays": 3650
+    }
+  },
+  "legs": [
+    {
+      "legId": "L1",
+      "payOrReceive": "Pay",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Fixed",
+      "fixedRate": 0.0375,
+      "paymentFrequency": "P6M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    },
+    {
+      "legId": "L2",
+      "payOrReceive": "Receive",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Floating",
+      "floatingRateIndex": "BBSW",
+      "spread": 0.0015,
+      "resetFrequency": "P3M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    }
+  ],
+  "valuation": {
+    "modelId": "IRS-PV-Model-v1.4",
+    "priceSource": "Internal",
+    "valuationTimestamp": "2024-03-20T09:50:00Z",
+    "valuationCurrency": "AUD"
+  },
+  "riskMetrics": {
+    "npv": {
+      "value": 15200.55,
+      "currency": "AUD",
+      "precisionNote": "rounded to 2 decimals"
+    },
+    "pv01": {
+      "value": 112.7,
+      "currency": "AUD",
+      "precisionNote": "rounded to 1 decimal"
+    },
+    "dv01": {
+      "value": 95.3,
+      "currency": "AUD",
+      "precisionNote": "rounded to 1 decimal"
+    }
+  }
+} 

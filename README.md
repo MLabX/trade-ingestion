@@ -55,14 +55,14 @@ solace:
 mvn clean package
 
 # Run the application
-java -jar target/deal-ingestion-1.0.0.jar
+java -jar target/trade-ingestion-1.0.0.jar
 ```
 
 ### Docker
 
 ```bash
 # Build the Docker image
-docker build -t deal-ingestion-service .
+docker build -t trade-ingestion-service .
 
 # Run the container
 docker run -p 8080:8080 \
@@ -71,7 +71,7 @@ docker run -p 8080:8080 \
   -e SOLACE_HOST=your_solace_host \
   -e SOLACE_USERNAME=your_username \
   -e SOLACE_PASSWORD=your_password \
-  deal-ingestion-service
+  trade-ingestion-service
 ```
 
 ### Kubernetes
@@ -120,3 +120,25 @@ mvn verify
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Running the Application
+
+### Using Java
+
+```bash
+mvn clean package
+java -jar target/trade-ingestion-1.0.0.jar
+```
+
+### Using Docker
+
+```bash
+docker build -t trade-ingestion-service .
+docker run -p 8080:8080 trade-ingestion-service
+```
+
+### Services
+
+The following services are available:
+
+- trade-ingestion-service: Main application service

@@ -1,6 +1,10 @@
 package com.magiccode.tradeingestion.service;
 
+import com.magiccode.tradeingestion.exception.DealProcessingException;
 import com.magiccode.tradeingestion.model.Deal;
+import com.magiccode.tradeingestion.repository.DealRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -14,9 +18,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class DealPersistenceService {
     private final ConcurrentHashMap<String, Lock> dealLocks = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Deal> dealStore = new ConcurrentHashMap<>();
+    private final DealRepository dealRepository;
 
     @Cacheable(value = "deals", key = "#dealId")
     public Optional<Deal> getDeal(String dealId) {
@@ -25,21 +32,26 @@ public class DealPersistenceService {
 
     @Transactional
     public Deal saveDeal(Deal deal) {
-        Lock lock = dealLocks.computeIfAbsent(deal.getDealId(), k -> new ReentrantLock());
-        lock.lock();
-        try {
-            Optional<Deal> existingDeal = getDeal(deal.getDealId());
-            if (existingDeal.isPresent() && existingDeal.get().getVersion() >= deal.getVersion()) {
-                throw new ConcurrentModificationException(
-                    "Deal version conflict: expected version > " + existingDeal.get().getVersion());
+        log.info("Saving deal: {}", deal.getDealId());
+        
+        // Check if deal already exists
+        Optional<Deal> existingDeal = dealRepository.findByDealId(deal.getDealId());
+        
+        if (existingDeal.isPresent()) {
+            // Version check for optimistic locking
+            if (existingDeal.get().getVersion() > deal.getVersion()) {
+                log.warn("Deal {} has been updated by another process. Current version: {}, Attempted version: {}", 
+                    deal.getDealId(), existingDeal.get().getVersion(), deal.getVersion());
+                throw new DealProcessingException("Deal has been updated by another process");
             }
-            
-            Deal savedDeal = deal.withIncrementedVersion();
-            dealStore.put(deal.getDealId(), savedDeal);
-            return savedDeal;
-        } finally {
-            lock.unlock();
         }
+        
+        // Save the deal
+        Deal savedDeal = dealRepository.save(deal);
+        
+        log.info("Successfully saved deal: {}", savedDeal.getDealId());
+        
+        return savedDeal;
     }
 
     @CacheEvict(value = "deals", key = "#dealId")

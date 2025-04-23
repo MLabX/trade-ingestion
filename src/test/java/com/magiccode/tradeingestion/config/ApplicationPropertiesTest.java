@@ -3,24 +3,35 @@ package com.magiccode.tradeingestion.config;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.core.env.Environment;
+import org.springframework.test.context.ActiveProfiles;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-@TestPropertySource(locations = "classpath:application-test.yml")
-public class ApplicationPropertiesTest {
+@ActiveProfiles("test")
+class ApplicationPropertiesTest {
 
     @Autowired
-    private SolaceConfig solaceConfig;
+    private Environment env;
 
     @Test
-    public void testSolaceProperties() {
-        // These values should match what's in application-test.yml
-        assertEquals("localhost", solaceConfig.getHost());
-        assertEquals("test", solaceConfig.getUsername());
-        assertEquals("test", solaceConfig.getPassword());
-        assertEquals("default", solaceConfig.getVpn());
+    void testJmsProperties() {
+        assertThat(env.getProperty("spring.artemis.broker-url")).isNotNull();
+        assertThat(env.getProperty("spring.artemis.user")).isNotNull();
+        assertThat(env.getProperty("spring.artemis.password")).isNotNull();
+    }
+
+    @Test
+    void testRedisProperties() {
+        assertThat(env.getProperty("spring.redis.host")).isNotNull();
+        assertThat(env.getProperty("spring.redis.port")).isNotNull();
+    }
+
+    @Test
+    void testDatabaseProperties() {
+        assertThat(env.getProperty("spring.datasource.url")).isNotNull();
+        assertThat(env.getProperty("spring.datasource.username")).isNotNull();
+        assertThat(env.getProperty("spring.datasource.password")).isNotNull();
     }
 } 

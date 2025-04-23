@@ -1,6 +1,6 @@
 package com.magiccode.tradeingestion.controller;
 
-import com.magiccode.tradeingestion.model.Deal;
+import com.magiccode.tradeingestion.model.*;
 import com.magiccode.tradeingestion.repository.DealRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,8 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.UUID;
+import java.util.Collections;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -31,77 +32,114 @@ public class TradeControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private DealRepository DealRepository;
+    private DealRepository dealRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Deal deal;
+    private FixedIncomeDerivativeDeal deal;
 
     @BeforeEach
     public void setUp() {
-        tradeRepository.deleteAll();
-        LocalDateTime now = LocalDateTime.now();
-        trade = new Trade(
-            UUID.randomUUID(),
-            "TRADE123",
-            "CP001",
-            "AAPL",
-            new BigDecimal("100"),
-            new BigDecimal("150.50"),
-            "USD",
-            "NEW",
-            1L,
-            now,
-            now,
-            now
-        );
+        dealRepository.deleteAll();
+        LocalDate now = LocalDate.now();
+        
+        // Create test deal legs
+        DealLeg payLeg = DealLeg.builder()
+            .legId("L1")
+            .payOrReceive("Pay")
+            .notionalAmount(new DealLeg.NotionalAmount(new BigDecimal("10000000"), "AUD"))
+            .legType("Fixed")
+            .legRate(new BigDecimal("0.0375"))
+            .legPaymentFrequency("P6M")
+            .legDayCountConvention("ACT/365")
+            .legBusinessDayConvention("ModifiedFollowing")
+            .build();
+
+        DealLeg receiveLeg = DealLeg.builder()
+            .legId("L2")
+            .payOrReceive("Receive")
+            .notionalAmount(new DealLeg.NotionalAmount(new BigDecimal("10000000"), "AUD"))
+            .legType("Floating")
+            .legIndex("BBSW")
+            .legSpread(new BigDecimal("0.0015"))
+            .legPaymentFrequency("P3M")
+            .legDayCountConvention("ACT/365")
+            .legBusinessDayConvention("ModifiedFollowing")
+            .build();
+
+        // Create test deal
+        deal = FixedIncomeDerivativeDeal.builder()
+            .dealId("IRS-20250410-00001")
+            .dealType("InterestRateSwap")
+            .executionVenue("OTC")
+            .tradeDate(now)
+            .valueDate(now.plusDays(2))
+            .maturityDate(now.plusYears(5))
+            .status("NEW")
+            .isBackDated(false)
+            .bookingInfo(BookingInfo.builder()
+                .books(Collections.singletonList(new BookingInfo.Book("SYDIRS", "Sydney IRS", "Trading", "AUD")))
+                .build())
+            .trader(TraderInfo.builder()
+                .id("TR123")
+                .name("John Doe")
+                .desk("Rates-Sydney")
+                .build())
+            .counterparty(CounterpartyInfo.builder()
+                .entityId("CP-987654")
+                .legalName("ABC Bank")
+                .lei("5493001KJTIIGC8Y1R12")
+                .jurisdiction("AU")
+                .build())
+            .legs(Collections.singletonList(payLeg))
+            .version(1L)
+            .build();
     }
 
     @Test
-    public void testCreateTrade() throws Exception {
-        String tradeJson = objectMapper.writeValueAsString(trade);
+    public void testCreateDeal() throws Exception {
+        String dealJson = objectMapper.writeValueAsString(deal);
 
-        mockMvc.perform(post("/api/trades")
+        mockMvc.perform(post("/api/deals")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(tradeJson))
+                .content(dealJson))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.instrumentId").value("AAPL"))
-                .andExpect(jsonPath("$.quantity").value(100))
-                .andExpect(jsonPath("$.price").value(150.50))
+                .andExpect(jsonPath("$.dealId").value("IRS-20250410-00001"))
+                .andExpect(jsonPath("$.dealType").value("InterestRateSwap"))
                 .andExpect(jsonPath("$.status").value("NEW"));
     }
 
     @Test
-    public void testGetTradeById() throws Exception {
-        Trade savedTrade = tradeRepository.save(trade);
+    public void testGetDealById() throws Exception {
+        Deal savedDeal = dealRepository.save(deal);
 
-        mockMvc.perform(get("/api/trades/{id}", savedTrade.id()))
+        mockMvc.perform(get("/api/deals/{id}", savedDeal.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.instrumentId").value("AAPL"))
-                .andExpect(jsonPath("$.quantity").value(100))
-                .andExpect(jsonPath("$.price").value(150.50));
+                .andExpect(jsonPath("$.dealId").value("IRS-20250410-00001"))
+                .andExpect(jsonPath("$.dealType").value("InterestRateSwap"))
+                .andExpect(jsonPath("$.status").value("NEW"));
     }
 
     @Test
-    public void testGetAllTrades() throws Exception {
-        tradeRepository.save(trade);
+    public void testGetAllDeals() throws Exception {
+        dealRepository.save(deal);
 
-        mockMvc.perform(get("/api/trades"))
+        mockMvc.perform(get("/api/deals"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].instrumentId").value("AAPL"))
-                .andExpect(jsonPath("$[0].quantity").value(100))
-                .andExpect(jsonPath("$[0].price").value(150.50));
+                .andExpect(jsonPath("$[0].dealId").value("IRS-20250410-00001"))
+                .andExpect(jsonPath("$[0].dealType").value("InterestRateSwap"))
+                .andExpect(jsonPath("$[0].status").value("NEW"));
     }
 
     @Test
-    public void testGetTradesBySymbol() throws Exception {
-        tradeRepository.save(trade);
+    public void testGetDealsBySymbol() throws Exception {
+        dealRepository.save(deal);
 
-        mockMvc.perform(get("/api/trades/symbol/{symbol}", trade.instrumentId()))
+        mockMvc.perform(get("/api/deals/symbol/{symbol}", "AUD"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].instrumentId").value("AAPL"))
-                .andExpect(jsonPath("$[0].quantity").value(100))
-                .andExpect(jsonPath("$[0].price").value(150.50));
+                .andExpect(jsonPath("$[0].dealId").value("IRS-20250410-00001"))
+                .andExpect(jsonPath("$[0].dealType").value("InterestRateSwap"))
+                .andExpect(jsonPath("$[0].status").value("NEW"));
     }
 } 

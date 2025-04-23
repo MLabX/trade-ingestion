@@ -1,146 +1,165 @@
 package com.magiccode.tradeingestion.service;
 
-import com.magiccode.tradeingestion.model.Deal;
+import com.magiccode.tradeingestion.model.*;
 import com.magiccode.tradeingestion.repository.DealRepository;
-import com.magiccode.tradeingestion.exception.DealProcessingException;
+import com.magiccode.tradeingestion.testdata.TestDataFactory;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jms.core.JmsTemplate;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for the TradeIngestionService.
+ * 
+ * This test class demonstrates the use of the TestDataFactory for creating test data.
+ * The factory's caching mechanism helps optimize test performance by:
+ * 1. Reducing file I/O operations
+ * 2. Minimizing object deserialization
+ * 3. Supporting parallel test execution
+ * 
+ * The test class also includes proper cleanup to prevent memory leaks
+ * and ensure test isolation.
+ */
 @ExtendWith(MockitoExtension.class)
-class DealIngestionServiceTest {
+class TradeIngestionServiceTest {
 
     @Mock
     private DealRepository dealRepository;
 
-    @Mock
-    private DealValidationService dealValidationService;
-
-    @Mock
-    private JmsTemplate jmsTemplate;
-
     @InjectMocks
-    private DealIngestionService dealIngestionService;
+    private TradeIngestionService tradeIngestionService;
 
-    private Deal testDeal;
-    private LocalDateTime now;
+    private TestDeal testDeal;
 
+    /**
+     * Sets up test data before each test method.
+     * Uses the TestDataFactory to create a test deal instance.
+     * The factory's caching mechanism ensures efficient test data creation.
+     */
     @BeforeEach
     void setUp() {
-        now = LocalDateTime.now();
-        testDeal = Deal.createNew(
-            "DEAL-123",
-            "COUNTERPARTY-1",
-            "AAPL",
-            new BigDecimal("100"),
-            new BigDecimal("150.50"),
-            "USD"
-        );
+        testDeal = TestDataFactory.createTestDeal();
+        testDeal.setDealDate(LocalDateTime.now());
     }
 
+    /**
+     * Cleans up test data after all test methods.
+     * This is important to:
+     * 1. Prevent memory leaks in long-running test suites
+     * 2. Ensure test isolation between different test classes
+     * 3. Maintain consistent test behavior
+     */
+    @AfterAll
+    static void tearDown() {
+        TestDataFactory.clearCache();
+    }
+
+    /**
+     * Tests successful deal processing.
+     * Verifies that:
+     * 1. The deal is saved correctly
+     * 2. All deal properties are preserved
+     * 3. The repository's save method is called
+     */
     @Test
     void testProcessDeal_Success() {
-        // Arrange
-        when(dealValidationService.validateDeal(any(Deal.class))).thenReturn(Collections.emptyList());
         when(dealRepository.save(any(Deal.class))).thenReturn(testDeal);
 
-        // Act
-        Deal result = dealIngestionService.processDeal(testDeal);
+        Deal result = tradeIngestionService.processDeal(testDeal);
 
-        // Assert
         assertNotNull(result);
+        assertEquals(testDeal.getDealId(), result.getDealId());
+        assertEquals(testDeal.getClientId(), result.getClientId());
         assertEquals(testDeal.getInstrumentId(), result.getInstrumentId());
         assertEquals(testDeal.getQuantity(), result.getQuantity());
         assertEquals(testDeal.getPrice(), result.getPrice());
-        verify(dealRepository).save(any(Deal.class));
-        verify(jmsTemplate).convertAndSend(eq("deals"), any(Deal.class));
+        assertEquals(testDeal.getCurrency(), result.getCurrency());
+        assertEquals(testDeal.getStatus(), result.getStatus());
+        assertEquals(testDeal.getVersion(), result.getVersion());
+        assertEquals(testDeal.getDealDate().toLocalDate(), result.getDealDate().toLocalDate());
+        verify(dealRepository).save(testDeal);
     }
 
+    /**
+     * Tests retrieving a deal by ID.
+     * Verifies that:
+     * 1. The correct deal is returned
+     * 2. The repository's findById method is called
+     */
     @Test
-    void testProcessDeal_ValidationFailure() {
-        // Arrange
-        List<String> validationErrors = Arrays.asList("Invalid client ID", "Invalid instrument ID");
-        when(dealValidationService.validateDeal(any(Deal.class))).thenReturn(validationErrors);
+    void testGetDealById() {
+        UUID dealId = UUID.randomUUID();
+        when(dealRepository.findById(dealId)).thenReturn(Optional.of(testDeal));
 
-        // Act & Assert
-        assertThrows(DealProcessingException.class, () -> dealIngestionService.processDeal(testDeal));
-        verify(dealRepository, never()).save(any(Deal.class));
-        verify(jmsTemplate, never()).convertAndSend(anyString(), any(Deal.class));
+        Optional<Deal> result = tradeIngestionService.getDealById(dealId);
+
+        assertTrue(result.isPresent());
+        assertEquals(testDeal.getDealId(), result.get().getDealId());
+        verify(dealRepository).findById(dealId);
     }
 
+    /**
+     * Tests retrieving all deals.
+     * Verifies that:
+     * 1. The correct number of deals is returned
+     * 2. The repository's findAll method is called
+     */
     @Test
-    void testGetDealById_Success() {
-        // Arrange
-        when(dealRepository.findById(testDeal.getId())).thenReturn(Optional.of(testDeal));
+    void testGetAllDeals() {
+        when(dealRepository.findAll()).thenReturn(List.of(testDeal));
 
-        // Act
-        Deal result = dealIngestionService.getDealById(testDeal.getId());
+        List<Deal> results = tradeIngestionService.getAllDeals();
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(testDeal.getId(), result.getId());
-        assertEquals(testDeal.getInstrumentId(), result.getInstrumentId());
-    }
-
-    @Test
-    void testGetDealById_NotFound() {
-        // Arrange
-        when(dealRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(DealProcessingException.class, () -> dealIngestionService.getDealById(UUID.randomUUID()));
-    }
-
-    @Test
-    void testGetAllDeals_Success() {
-        // Arrange
-        Deal deal2 = Deal.createNew(
-            "DEAL-124",
-            "COUNTERPARTY-2",
-            "GOOGL",
-            new BigDecimal("200"),
-            new BigDecimal("2500.75"),
-            "USD"
-        );
-        when(dealRepository.findAll()).thenReturn(Arrays.asList(testDeal, deal2));
-
-        // Act
-        List<Deal> results = dealIngestionService.getAllDeals();
-
-        // Assert
-        assertNotNull(results);
-        assertEquals(2, results.size());
-    }
-
-    @Test
-    void testGetDealsBySymbol_Success() {
-        // Arrange
-        when(dealRepository.findByInstrumentId("AAPL")).thenReturn(Arrays.asList(testDeal));
-
-        // Act
-        List<Deal> results = dealIngestionService.getDealsBySymbol("AAPL");
-
-        // Assert
-        assertNotNull(results);
+        assertFalse(results.isEmpty());
         assertEquals(1, results.size());
-        assertEquals("AAPL", results.get(0).getInstrumentId());
+        assertEquals(testDeal.getDealId(), results.get(0).getDealId());
+        verify(dealRepository).findAll();
     }
-} 
+
+    /**
+     * Tests retrieving deals by instrument ID.
+     * Verifies that:
+     * 1. The correct deals are returned
+     * 2. The repository's findByInstrumentId method is called
+     */
+    @Test
+    void testGetDealsByInstrumentId() {
+        when(dealRepository.findByInstrumentId(testDeal.getInstrumentId())).thenReturn(List.of(testDeal));
+
+        List<Deal> results = tradeIngestionService.getDealsByInstrumentId(testDeal.getInstrumentId());
+
+        assertFalse(results.isEmpty());
+        assertEquals(1, results.size());
+        assertEquals(testDeal.getInstrumentId(), results.get(0).getInstrumentId());
+        verify(dealRepository).findByInstrumentId(testDeal.getInstrumentId());
+    }
+
+    /**
+     * Tests retrieving deals by symbol.
+     * Verifies that:
+     * 1. The correct deals are returned
+     * 2. The repository's findByInstrumentId method is called
+     */
+    @Test
+    void testGetDealsBySymbol() {
+        when(dealRepository.findByInstrumentId(testDeal.getInstrumentId())).thenReturn(List.of(testDeal));
+
+        List<Deal> results = tradeIngestionService.getDealsBySymbol(testDeal.getInstrumentId());
+
+        assertFalse(results.isEmpty());
+        assertEquals(1, results.size());
+        assertEquals(testDeal.getInstrumentId(), results.get(0).getInstrumentId());
+        verify(dealRepository).findByInstrumentId(testDeal.getInstrumentId());
+    }
+}

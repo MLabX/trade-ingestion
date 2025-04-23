@@ -43,8 +43,9 @@ public class DealController {
     public ResponseEntity<Deal> getDealById(@PathVariable UUID id) {
         try {
             logger.info("Received request to get deal by ID: {}", id);
-            Deal deal = dealIngestionService.getDealById(id);
-            return new ResponseEntity<>(deal, HttpStatus.OK);
+            return dealIngestionService.getDealById(id)
+                .map(deal -> new ResponseEntity<>(deal, HttpStatus.OK))
+                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
         } catch (DealProcessingException e) {
             logger.error("Error retrieving deal: {}", e.getMessage(), e);
             throw e;
