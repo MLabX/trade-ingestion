@@ -7,9 +7,12 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+
+import java.time.Duration;
 
 @SpringBootTest
 @Testcontainers
@@ -28,7 +31,8 @@ public abstract class BaseIntegrationTest {
         .withExposedPorts(8080, 55555, 55003, 55443)
         .withEnv("username_admin_globalaccesslevel", "admin")
         .withEnv("username_admin_password", "admin")
-        .withEnv("system_scaling_maxconnectioncount", "100");
+        .withEnv("system_scaling_maxconnectioncount", "100")
+        .waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2)));
 
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {

@@ -8,7 +8,6 @@ import com.solacesystems.jms.SolJmsUtility;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -36,7 +35,6 @@ import org.mockito.Mockito;
 
 @TestConfiguration
 @EnableTransactionManagement
-@ComponentScan(basePackages = "com.magiccode.tradeingestion")
 public class TestConfig {
 
     @Bean(destroyMethod = "stop")
@@ -95,7 +93,19 @@ public class TestConfig {
     @Bean
     @Primary
     public ConnectionFactory jmsConnectionFactory() {
-        return Mockito.mock(ConnectionFactory.class);
+        try {
+            SolConnectionFactory connectionFactory = SolJmsUtility.createConnectionFactory();
+            connectionFactory.setHost("localhost");
+            connectionFactory.setPort(55555);
+            connectionFactory.setVPN("default");
+            connectionFactory.setUsername("admin");
+            connectionFactory.setPassword("admin");
+            connectionFactory.setDirectTransport(false);
+            connectionFactory.setReconnectRetries(3);
+            return connectionFactory;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create Solace JMS connection factory", e);
+        }
     }
 
     @Bean
@@ -105,6 +115,7 @@ public class TestConfig {
         factory.setDestinationResolver(new DynamicDestinationResolver());
         factory.setConcurrency("3-10");
         factory.setSessionTransacted(true);
+        factory.setAutoStartup(false);
         return factory;
     }
 

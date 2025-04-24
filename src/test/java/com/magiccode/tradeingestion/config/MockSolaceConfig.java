@@ -1,35 +1,22 @@
 package com.magiccode.tradeingestion.config;
 
-import com.solacesystems.jms.SolConnectionFactory;
-import com.solacesystems.jms.SolJmsUtility;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.support.destination.DynamicDestinationResolver;
+import org.springframework.jms.connection.CachingConnectionFactory;
 
 import jakarta.jms.ConnectionFactory;
 
 @Configuration
-@Profile("!test")
-public class SolaceConfig {
+@Profile("test")
+public class MockSolaceConfig {
 
     @Bean
     public ConnectionFactory jmsConnectionFactory() {
-        try {
-            SolConnectionFactory connectionFactory = SolJmsUtility.createConnectionFactory();
-            connectionFactory.setHost("localhost");
-            connectionFactory.setPort(55555);
-            connectionFactory.setVPN("default");
-            connectionFactory.setUsername("admin");
-            connectionFactory.setPassword("admin");
-            connectionFactory.setDirectTransport(false);
-            connectionFactory.setReconnectRetries(3);
-            return connectionFactory;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create Solace JMS connection factory", e);
-        }
+        return new CachingConnectionFactory();
     }
 
     @Bean
@@ -37,8 +24,9 @@ public class SolaceConfig {
         DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setDestinationResolver(new DynamicDestinationResolver());
-        factory.setConcurrency("3-10");
+        factory.setConcurrency("1");
         factory.setSessionTransacted(true);
+        factory.setAutoStartup(false);
         return factory;
     }
 

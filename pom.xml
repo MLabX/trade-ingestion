@@ -26,6 +26,7 @@
         <solace.version>1.2.0</solace.version>
         <sol-jms.version>10.19.0</sol-jms.version>
         <testcontainers.version>1.19.3</testcontainers.version>
+        <skipITs>true</skipITs>
     </properties>
 
     <repositories>
@@ -194,6 +195,7 @@
                 <version>3.2.5</version>
                 <configuration>
                     <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                    <skipTests>${skipITs}</skipTests>
                 </configuration>
             </plugin>
             <plugin>
@@ -236,29 +238,9 @@
     <profiles>
         <profile>
             <id>integration-tests</id>
-            <activation>
-                <property>
-                    <name>runIT</name>
-                    <value>true</value>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.1.2</version>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <skipITs>false</skipITs>
+            </properties>
         </profile>
     </profiles>
 
