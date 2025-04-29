@@ -1,6 +1,6 @@
 package com.magiccode.tradeingestion.service;
 
-import com.magiccode.tradeingestion.config.TestConfig;
+import com.magiccode.tradeingestion.BaseIntegrationTest;
 import com.magiccode.tradeingestion.model.Deal;
 import com.magiccode.tradeingestion.model.FixedIncomeDerivativeDeal;
 import com.magiccode.tradeingestion.repository.DealRepository;
@@ -21,10 +21,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@ActiveProfiles("test")
-@Import(TestConfig.class)
-@Transactional
-public class DealIngestionServiceIntegrationTest {
+@ActiveProfiles("integration")
+public class DealIngestionServiceIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private DealIngestionService dealIngestionService;

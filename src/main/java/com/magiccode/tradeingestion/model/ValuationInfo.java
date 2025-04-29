@@ -1,6 +1,7 @@
 package com.magiccode.tradeingestion.model;
 
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,20 +35,24 @@ public class ValuationInfo {
     /**
      * Identifier of the valuation model used
      */
+    @Column(name = "valuation_model_id")
     private String modelId;
     
     /**
      * Source of the price data used in valuation
      */
+    @Column(name = "valuation_price_source")
     private String priceSource;
     
     /**
      * Timestamp when the valuation was performed
      */
+    @Column(name = "valuation_timestamp")
     private LocalDateTime valuationTimestamp;
     
     /**
      * Currency in which the valuation was performed
      */
+    @Column(name = "valuation_currency")
     private String valuationCurrency;
 } 

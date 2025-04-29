@@ -28,7 +28,7 @@ public class DefaultDealValidationService implements DealValidationService {
         if (deal.getCurrency() == null || !deal.getCurrency().matches("^[A-Z]{3}$")) {
             throw new IllegalArgumentException("Currency must be a valid 3-letter code");
         }
-        if (deal.getStatus() == null || !deal.getStatus().matches("^(NEW|PROCESSING|COMPLETED|FAILED)$")) {
+        if (deal.getStatus() == null || !deal.getStatus().matches("^(NEW|PROCESSING|COMPLETED|FAILED|CONFIRMED|AMENDED|CANCELLED)$")) {
             throw new IllegalArgumentException("Invalid deal status");
         }
         if (deal.getDealDate() == null) {

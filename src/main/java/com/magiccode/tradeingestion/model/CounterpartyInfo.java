@@ -1,5 +1,6 @@
 package com.magiccode.tradeingestion.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,21 +32,25 @@ public class CounterpartyInfo {
     /**
      * Unique identifier for the counterparty entity
      */
+    @Column(name = "counterparty_entity_id")
     private String entityId;
     
     /**
      * Legal name of the counterparty
      */
+    @Column(name = "counterparty_legal_name")
     private String legalName;
     
     /**
      * Legal Entity Identifier (LEI) of the counterparty
      */
+    @Column(name = "counterparty_lei")
     private String lei;
     
     /**
      * Jurisdiction where the counterparty is registered
      */
+    @Column(name = "counterparty_jurisdiction")
     private String jurisdiction;
     
     /**
@@ -61,16 +66,19 @@ public class CounterpartyInfo {
         /**
          * Indicates whether the counterparty's information requires masking
          */
+        @Column(name = "counterparty_requires_masking")
         private boolean requiresMasking;
         
         /**
          * Number of days the counterparty's information should be retained
          */
+        @Column(name = "counterparty_retention_days")
         private int retentionDays;
     }
     
     /**
      * Confidentiality and data retention policies for this counterparty
      */
+    @Column(name = "counterparty_confidentiality_policy")
     private ConfidentialityPolicy confidentialityPolicy;
 } 

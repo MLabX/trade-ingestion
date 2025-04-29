@@ -46,17 +46,142 @@ solace:
     vpn: your_vpn
 ```
 
+## Testing
+
+The project uses a structured approach to testing with clear separation between unit and integration tests.
+
+### Test Structure
+- Unit tests extend `LightweightUnitTest` to avoid loading the full Spring context
+- Unit tests are located in `src/test/java/com/magiccode/tradeingestion/unit/`
+- Integration tests are organized by component:
+  - Solace integration tests: `src/test/java/com/magiccode/tradeingestion/integration/solace/`
+  - Redis integration tests: `src/test/java/com/magiccode/tradeingestion/integration/cache/`
+  - PostgreSQL integration tests: `src/test/java/com/magiccode/tradeingestion/integration/database/`
+- Base test configurations are in `src/test/java/com/magiccode/tradeingestion/config/`
+
+### Running Tests
+
+#### Unit Tests Only
+```bash
+mvn test
+```
+This runs all unit tests that extend `LightweightUnitTest` or are located in the `unit/` directory.
+
+#### Specific Unit Test
+```bash
+mvn test -Dtest=YourUnitTestClass
+```
+
+#### Integration Tests
+The project provides several integration test profiles for different components:
+
+##### All Integration Tests
+```bash
+mvn verify -P integration-tests
+```
+
+##### Solace Integration Tests
+```bash
+mvn verify -P solace-integration-tests
+```
+
+##### Redis Integration Tests
+```bash
+mvn verify -P redis-integration-tests
+```
+
+##### PostgreSQL Integration Tests
+```bash
+mvn verify -P postgres-integration-tests
+```
+
+#### All Tests
+```bash
+mvn clean verify
+```
+
+### Test Configuration
+- Unit tests extend `LightweightUnitTest` for minimal Spring context and test data support
+- Integration tests extend appropriate base classes (e.g., `BasePostgresIntegrationTest`, `BaseRedisIntegrationTest`)
+- Database tests use `PostgresTestConfig` for PostgreSQL container
+- Cache tests use `RedisTestConfig` for Redis container
+- Solace tests use `SolaceContainerConfig` for Solace container
+
+### Test Data Management
+- Test data is managed through `TestDataFactory` and `TestDataConfig`
+- JSON test files are located in `src/test/resources/testdata/`
+- Test data is cached for performance in CI/CD environments
+- Double-caching strategy (JSON content and deserialized objects) for optimal test performance
+
+### Test Profiles
+The project uses Maven profiles to manage different test types:
+- `unit-tests`: Runs only unit tests (default)
+- `integration-tests`: Runs all integration tests
+- `solace-integration-tests`: Runs only Solace integration tests
+- `redis-integration-tests`: Runs only Redis integration tests
+- `postgres-integration-tests`: Runs only PostgreSQL integration tests
+
+Each integration test profile:
+- Uses TestContainers for containerized testing
+- Excludes unit tests
+- Enables verbose TestContainers output
+- Disables container reuse for test isolation
+
 ## Building and Running
 
 ### Local Development
 
-```bash
-# Build the application
-mvn clean package
+#### Prerequisites
+1. Java 21
+2. PostgreSQL 15
+3. Docker (for Solace)
+4. Redis
 
-# Run the application
-java -jar target/trade-ingestion-1.0.0.jar
-```
+#### Database Setup
+1. Install PostgreSQL 15
+2. Create the database:
+   ```sql
+   CREATE DATABASE trade_ingestion;
+   ```
+3. Create a user (if not already exists):
+   ```sql
+   CREATE USER postgres WITH PASSWORD 'postgres';
+   GRANT ALL PRIVILEGES ON DATABASE trade_ingestion TO postgres;
+   ```
+
+#### Solace Setup
+1. Start Solace container:
+   ```bash
+   docker run -d -p 55555:55555 -p 8008:8008 -p 1883:1883 -p 8000:8000 -p 5672:5672 -p 9000:9000 -p 2222:2222 \
+   --shm-size=2g --env username_admin_globalaccesslevel=admin --env username_admin_password=admin \
+   --name=solace solace/solace-pubsub-standard
+   ```
+
+#### Redis Setup
+1. Install Redis
+2. Start Redis server:
+   ```bash
+   redis-server
+   ```
+
+#### Running the Application
+1. Build the application:
+   ```bash
+   mvn clean install
+   ```
+
+2. Run with local profile:
+   ```bash
+   mvn spring-boot:run -Dspring.profiles.active=local
+   ```
+
+#### Configuration
+The application uses the following default ports:
+- PostgreSQL: 5432
+- Solace: 55555
+- Redis: 6379
+
+All configurations can be overridden in `application-local.properties`.
 
 ### Docker
 
@@ -107,38 +232,6 @@ The application exposes several monitoring endpoints:
 - `/actuator/ratelimiters` - Rate limiter status
 - `/actuator/retries` - Retry status
 
-## Testing
-
-```bash
-# Run tests
-mvn test
-
-# Run tests with coverage
-mvn verify
-```
-
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Running the Application
-
-### Using Java
-
-```bash
-mvn clean package
-java -jar target/trade-ingestion-1.0.0.jar
-```
-
-### Using Docker
-
-```bash
-docker build -t trade-ingestion-service .
-docker run -p 8080:8080 trade-ingestion-service
-```
-
-### Services
-
-The following services are available:
-
-- trade-ingestion-service: Main application service
+This project is licensed under the MIT License - see the LICENSE file for details. 

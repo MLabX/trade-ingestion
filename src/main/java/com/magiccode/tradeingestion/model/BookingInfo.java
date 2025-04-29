@@ -1,14 +1,14 @@
 package com.magiccode.tradeingestion.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -17,10 +17,7 @@ import java.util.List;
  * This class encapsulates all the necessary information for booking a deal,
  * including:
  * 1. Booking identification and type
- * 2. Booking dates and status
- * 3. Currency and amount details
- * 4. Reference and source information
- * 5. Associated books and their details
+ * 2. Associated books and their details
  * 
  * The class is designed to be embedded within a Deal entity
  * and provides a comprehensive set of booking-related attributes.
@@ -32,49 +29,25 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Embeddable
+@Entity
+@Table(name = "booking_info")
 public class BookingInfo implements Serializable {
     private static final long serialVersionUID = 1L;
     
-    @Column(name = "booking_id")
-    private String bookingId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
-    @Column(name = "booking_type")
-    private String bookingType;
-    
-    @Column(name = "booking_date")
-    private String bookingDate;
-    
-    @Column(name = "booking_status")
-    private String bookingStatus;
-    
-    @Column(name = "booking_currency")
-    private String bookingCurrency;
-    
-    @Column(name = "booking_amount")
-    private String bookingAmount;
-    
-    @Column(name = "booking_description")
-    private String bookingDescription;
-    
-    @Column(name = "booking_reference")
-    private String bookingReference;
-    
-    @Column(name = "booking_source")
-    private String bookingSource;
-    
-    @Column(name = "booking_destination")
-    private String bookingDestination;
-    
-    @Column(name = "booking_notes")
-    private String bookingNotes;
-    
-    private List<Book> books;
+    @OneToMany(mappedBy = "bookingInfo", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Book> books = new ArrayList<>();
     
     /**
-     * Inner class representing a book in the booking system.
+     * Represents a book in the booking system.
      * A book is a logical grouping of deals for accounting and reporting purposes.
      */
+    @Entity
+    @Table(name = "book")
     @Data
     @Builder
     @NoArgsConstructor
@@ -82,24 +55,28 @@ public class BookingInfo implements Serializable {
     public static class Book implements Serializable {
         private static final long serialVersionUID = 1L;
         
-        /**
-         * Unique identifier for the book
-         */
-        private String id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long id;
         
-        /**
-         * Name of the book
-         */
-        private String name;
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "booking_info_id", nullable = false)
+        private BookingInfo bookingInfo;
         
-        /**
-         * Type of the book (e.g., TRADING, HEDGING)
-         */
-        private String type;
+        @NotNull
+        @Column(name = "book_code", nullable = false)
+        private String bookCode;
         
-        /**
-         * Description of the book's purpose
-         */
-        private String description;
+        @NotNull
+        @Column(name = "book_name", nullable = false)
+        private String bookName;
+        
+        @NotNull
+        @Column(name = "book_type", nullable = false)
+        private String bookType;
+        
+        @NotNull
+        @Column(name = "book_currency", nullable = false, length = 3)
+        private String bookCurrency;
     }
 } 

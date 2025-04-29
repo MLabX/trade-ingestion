@@ -1,9 +1,10 @@
 package com.magiccode.tradeingestion.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
@@ -29,48 +30,94 @@ import java.math.BigDecimal;
  */
 @Embeddable
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class RiskMetrics {
-    /**
-     * Net Present Value of the deal
-     */
-    private MetricValue npv;
-    
-    /**
-     * Price Value of a Basis Point (PV01) of the deal
-     */
-    private MetricValue pv01;
-    
-    /**
-     * Dollar Value of a Basis Point (DV01) of the deal
-     */
-    private MetricValue dv01;
-    
     /**
      * Inner class representing a risk metric value with its associated
      * currency and precision information.
      */
     @Embeddable
     @Data
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class MetricValue {
+    public static abstract class MetricValue {
         /**
          * Numerical value of the metric
          */
+        @Column(name = "value", insertable = false, updatable = false)
         private BigDecimal value;
         
-        /**
-         * Currency in which the value is expressed
-         */
+        @Column(name = "currency", insertable = false, updatable = false)
         private String currency;
         
         /**
          * Notes about the precision or calculation methodology
          */
+        @Column(name = "precision_note", insertable = false, updatable = false)
         private String precisionNote;
     }
+
+    @Embeddable
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class NpvMetricValue extends MetricValue {
+        @Column(name = "npv_value", insertable = false, updatable = false)
+        private BigDecimal value;
+        
+        @Column(name = "npv_currency", insertable = false, updatable = false)
+        private String currency;
+        
+        @Column(name = "npv_precision_note", insertable = false, updatable = false)
+        private String precisionNote;
+    }
+
+    @Embeddable
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Pv01MetricValue extends MetricValue {
+        @Column(name = "pv01_value", insertable = false, updatable = false)
+        private BigDecimal value;
+        
+        @Column(name = "pv01_currency", insertable = false, updatable = false)
+        private String currency;
+        
+        @Column(name = "pv01_precision_note", insertable = false, updatable = false)
+        private String precisionNote;
+    }
+
+    @Embeddable
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Dv01MetricValue extends MetricValue {
+        @Column(name = "dv01_value", insertable = false, updatable = false)
+        private BigDecimal value;
+        
+        @Column(name = "dv01_currency", insertable = false, updatable = false)
+        private String currency;
+        
+        @Column(name = "dv01_precision_note", insertable = false, updatable = false)
+        private String precisionNote;
+    }
+
+    /**
+     * Net Present Value of the deal
+     */
+    private NpvMetricValue npv;
+    
+    /**
+     * Price Value of a Basis Point (PV01) of the deal
+     */
+    private Pv01MetricValue pv01;
+    
+    /**
+     * Dollar Value of a Basis Point (DV01) of the deal
+     */
+    private Dv01MetricValue dv01;
 } 

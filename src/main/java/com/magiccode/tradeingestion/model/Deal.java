@@ -1,7 +1,10 @@
 package com.magiccode.tradeingestion.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,6 +14,7 @@ import com.magiccode.tradeingestion.exception.DealProcessingException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.io.Serializable;
 
 /**
  * Base abstract class representing a financial deal in the system.
@@ -43,75 +47,95 @@ import java.util.UUID;
 @Entity
 @Table(name = "deals")
 @Inheritance(strategy = InheritanceType.JOINED)
-public abstract class Deal {
+public abstract class Deal implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @NotBlank(message = "Deal ID is required")
-    @Column(name = "deal_id", unique = true, nullable = false)
+    @Column(name = "base_deal_id", unique = true, nullable = false)
     private String dealId;
 
     @NotBlank(message = "Event type is required")
     @Pattern(regexp = "^(CREATED|UPDATED|CANCELLED)$", message = "Invalid event type")
-    @Column(name = "event_type", nullable = false)
+    @Column(name = "base_event_type", nullable = false)
     private String eventType;
 
     @NotBlank(message = "Client ID is required")
-    @Column(name = "client_id", nullable = false)
+    @Column(name = "base_client_id", nullable = false)
     private String clientId;
 
     @NotBlank(message = "Instrument ID is required")
-    @Column(name = "instrument_id", nullable = false)
+    @Column(name = "base_instrument_id", nullable = false)
     private String instrumentId;
 
     @NotNull(message = "Quantity is required")
     @Positive(message = "Quantity must be positive")
-    @Column(name = "quantity", nullable = false)
+    @Column(name = "base_quantity", nullable = false)
     private BigDecimal quantity;
 
     @NotNull(message = "Price is required")
     @Positive(message = "Price must be positive")
-    @Column(name = "price", nullable = false)
+    @Column(name = "base_price", nullable = false)
     private BigDecimal price;
 
     @NotBlank(message = "Currency is required")
     @Pattern(regexp = "^[A-Z]{3}$", message = "Currency must be a 3-letter code")
-    @Column(name = "currency", nullable = false)
+    @Column(name = "base_currency", nullable = false)
     private String currency;
 
     @NotBlank(message = "Status is required")
-    @Pattern(regexp = "^(NEW|PROCESSING|COMPLETED|FAILED)$", message = "Invalid status")
-    @Column(name = "status", nullable = false)
+    @Pattern(regexp = "^(NEW|PROCESSING|COMPLETED|FAILED|CONFIRMED|AMENDED|CANCELLED)$", message = "Invalid status")
+    @Column(name = "base_status", nullable = false)
     private String status;
 
     @Version
-    @Column(name = "version", nullable = false)
+    @Column(name = "base_version", nullable = false)
     private Long version;
 
     @NotNull(message = "Deal date is required")
-    @Column(name = "deal_date", nullable = false)
+    @Column(name = "base_deal_date", nullable = false)
     private LocalDateTime dealDate;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "base_created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "base_updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @Column(name = "processed_at")
+    @Column(name = "base_processed_at")
     private LocalDateTime processedAt;
 
     @Embedded
+    @AttributeOverrides({
+        @AttributeOverride(name = "createdBy", column = @Column(name = "base_created_by")),
+        @AttributeOverride(name = "createdDate", column = @Column(name = "base_created_date")),
+        @AttributeOverride(name = "lastModifiedBy", column = @Column(name = "base_last_modified_by")),
+        @AttributeOverride(name = "lastModifiedDate", column = @Column(name = "base_last_modified_date"))
+    })
     private AuditInfo audit;
 
     @Embedded
+    @AttributeOverrides({
+        @AttributeOverride(name = "classificationLevel", column = @Column(name = "base_classification_level")),
+        @AttributeOverride(name = "accessControlList", column = @Column(name = "base_access_control_list")),
+        @AttributeOverride(name = "encryptionKeyId", column = @Column(name = "base_encryption_key_id")),
+        @AttributeOverride(name = "dataJurisdiction", column = @Column(name = "base_data_jurisdiction")),
+        @AttributeOverride(name = "retentionPolicy", column = @Column(name = "base_retention_policy"))
+    })
     private DataSecurity dataSecurity;
 
     @Embedded
+    @AttributeOverrides({
+        @AttributeOverride(name = "processingStatus", column = @Column(name = "base_processing_status")),
+        @AttributeOverride(name = "processingStartTime", column = @Column(name = "base_processing_start_time")),
+        @AttributeOverride(name = "processingEndTime", column = @Column(name = "base_processing_end_time")),
+        @AttributeOverride(name = "processingErrors", column = @Column(name = "base_processing_errors")),
+        @AttributeOverride(name = "retryCount", column = @Column(name = "base_processing_retry_count"))
+    })
     private ProcessingMetadata processingMetadata;
 
     /**
@@ -228,41 +252,68 @@ public abstract class Deal {
             throw new DealProcessingException("Failed to create new deal instance", e);
         }
     }
-    
+
     /**
      * Checks if the deal is in NEW status.
      * 
      * @return true if the deal status is NEW
      */
     public boolean isNew() {
-        return "NEW".equals(status);
+        return "NEW".equalsIgnoreCase(status);
     }
-    
+
     /**
      * Checks if the deal is in PROCESSING status.
      * 
      * @return true if the deal status is PROCESSING
      */
     public boolean isProcessing() {
-        return "PROCESSING".equals(status);
+        return "PROCESSING".equalsIgnoreCase(status);
     }
-    
+
     /**
      * Checks if the deal is in COMPLETED status.
      * 
      * @return true if the deal status is COMPLETED
      */
     public boolean isCompleted() {
-        return "COMPLETED".equals(status);
+        return "COMPLETED".equalsIgnoreCase(status);
     }
-    
+
     /**
      * Checks if the deal is in FAILED status.
      * 
      * @return true if the deal status is FAILED
      */
     public boolean isFailed() {
-        return "FAILED".equals(status);
+        return "FAILED".equalsIgnoreCase(status);
+    }
+
+    /**
+     * Checks if the deal is in CONFIRMED status.
+     * 
+     * @return true if the deal status is CONFIRMED
+     */
+    public boolean isConfirmed() {
+        return "CONFIRMED".equalsIgnoreCase(status);
+    }
+
+    /**
+     * Checks if the deal is in AMENDED status.
+     * 
+     * @return true if the deal status is AMENDED
+     */
+    public boolean isAmended() {
+        return "AMENDED".equalsIgnoreCase(status);
+    }
+
+    /**
+     * Checks if the deal is in CANCELLED status.
+     * 
+     * @return true if the deal status is CANCELLED
+     */
+    public boolean isCancelled() {
+        return "CANCELLED".equalsIgnoreCase(status);
     }
 
     public abstract String getDealType();

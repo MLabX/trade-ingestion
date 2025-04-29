@@ -3,13 +3,15 @@ package com.magiccode.tradeingestion.service;
 import com.magiccode.tradeingestion.model.*;
 import com.magiccode.tradeingestion.repository.DealRepository;
 import com.magiccode.tradeingestion.testdata.TestDataFactory;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +34,7 @@ import static org.mockito.Mockito.*;
  * and ensure test isolation.
  */
 @ExtendWith(MockitoExtension.class)
+@SpringBootTest
 class TradeIngestionServiceTest {
 
     @Mock
@@ -39,6 +42,9 @@ class TradeIngestionServiceTest {
 
     @InjectMocks
     private TradeIngestionService tradeIngestionService;
+
+    @Autowired
+    private TestDataFactory testDataFactory;
 
     private TestDeal testDeal;
 
@@ -49,20 +55,20 @@ class TradeIngestionServiceTest {
      */
     @BeforeEach
     void setUp() {
-        testDeal = TestDataFactory.createTestDeal();
+        testDeal = testDataFactory.createTestDeal();
         testDeal.setDealDate(LocalDateTime.now());
     }
 
     /**
-     * Cleans up test data after all test methods.
+     * Cleans up test data after each test method.
      * This is important to:
      * 1. Prevent memory leaks in long-running test suites
      * 2. Ensure test isolation between different test classes
      * 3. Maintain consistent test behavior
      */
-    @AfterAll
-    static void tearDown() {
-        TestDataFactory.clearCache();
+    @AfterEach
+    void tearDown() {
+        testDataFactory.clearCache();
     }
 
     /**
@@ -105,25 +111,26 @@ class TradeIngestionServiceTest {
         Optional<Deal> result = tradeIngestionService.getDealById(dealId);
 
         assertTrue(result.isPresent());
-        assertEquals(testDeal.getDealId(), result.get().getDealId());
+        assertEquals(testDeal, result.get());
         verify(dealRepository).findById(dealId);
     }
 
     /**
      * Tests retrieving all deals.
      * Verifies that:
-     * 1. The correct number of deals is returned
+     * 1. All deals are returned
      * 2. The repository's findAll method is called
      */
     @Test
     void testGetAllDeals() {
-        when(dealRepository.findAll()).thenReturn(List.of(testDeal));
+        List<Deal> deals = List.of(testDeal);
+        when(dealRepository.findAll()).thenReturn(deals);
 
-        List<Deal> results = tradeIngestionService.getAllDeals();
+        List<Deal> result = tradeIngestionService.getAllDeals();
 
-        assertFalse(results.isEmpty());
-        assertEquals(1, results.size());
-        assertEquals(testDeal.getDealId(), results.get(0).getDealId());
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(testDeal, result.get(0));
         verify(dealRepository).findAll();
     }
 
@@ -135,14 +142,16 @@ class TradeIngestionServiceTest {
      */
     @Test
     void testGetDealsByInstrumentId() {
-        when(dealRepository.findByInstrumentId(testDeal.getInstrumentId())).thenReturn(List.of(testDeal));
+        String instrumentId = "TEST-INSTRUMENT";
+        List<Deal> deals = List.of(testDeal);
+        when(dealRepository.findByInstrumentId(instrumentId)).thenReturn(deals);
 
-        List<Deal> results = tradeIngestionService.getDealsByInstrumentId(testDeal.getInstrumentId());
+        List<Deal> result = tradeIngestionService.getDealsByInstrumentId(instrumentId);
 
-        assertFalse(results.isEmpty());
-        assertEquals(1, results.size());
-        assertEquals(testDeal.getInstrumentId(), results.get(0).getInstrumentId());
-        verify(dealRepository).findByInstrumentId(testDeal.getInstrumentId());
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(testDeal, result.get(0));
+        verify(dealRepository).findByInstrumentId(instrumentId);
     }
 
     /**
@@ -153,13 +162,15 @@ class TradeIngestionServiceTest {
      */
     @Test
     void testGetDealsBySymbol() {
-        when(dealRepository.findByInstrumentId(testDeal.getInstrumentId())).thenReturn(List.of(testDeal));
+        String instrumentId = "TEST-SYMBOL";
+        List<Deal> deals = List.of(testDeal);
+        when(dealRepository.findByInstrumentId(instrumentId)).thenReturn(deals);
 
-        List<Deal> results = tradeIngestionService.getDealsBySymbol(testDeal.getInstrumentId());
+        List<Deal> result = tradeIngestionService.getDealsBySymbol(instrumentId);
 
-        assertFalse(results.isEmpty());
-        assertEquals(1, results.size());
-        assertEquals(testDeal.getInstrumentId(), results.get(0).getInstrumentId());
-        verify(dealRepository).findByInstrumentId(testDeal.getInstrumentId());
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(testDeal, result.get(0));
+        verify(dealRepository).findByInstrumentId(instrumentId);
     }
 }

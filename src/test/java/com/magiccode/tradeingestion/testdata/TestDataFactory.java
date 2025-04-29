@@ -4,21 +4,31 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.magiccode.tradeingestion.model.Deal;
 import com.magiccode.tradeingestion.model.FixedIncomeDerivativeDeal;
 import com.magiccode.tradeingestion.model.TestDeal;
+import com.magiccode.tradeingestion.model.MessageHeader;
+import com.magiccode.tradeingestion.model.RiskMetrics;
+import com.magiccode.tradeingestion.model.ValuationInfo;
+import com.magiccode.tradeingestion.model.CounterpartyInfo;
+import com.magiccode.tradeingestion.model.DealLifecycleEvent;
+import com.magiccode.tradeingestion.model.AuditInfo;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.text.SimpleDateFormat;
+import java.util.function.Consumer;
 
 /**
  * Factory class for creating test data objects.
@@ -35,47 +45,40 @@ import java.text.SimpleDateFormat;
  * Thread safety is ensured through ConcurrentHashMap to support parallel test execution.
  */
 @Slf4j
+@Component
 public class TestDataFactory {
-    // Single ObjectMapper instance for thread-safe JSON processing
-    private static final ObjectMapper objectMapper = new ObjectMapper()
-        .registerModule(new JavaTimeModule())
-        .findAndRegisterModules()
-        .setDateFormat(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"))
-        .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    
-    // Formatters for consistent date/time handling
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_DATE;
-    
-    /**
-     * Cache for raw JSON content.
-     * Key: File name
-     * Value: JSON string content
-     * 
-     * This cache prevents repeated file I/O operations which can be expensive,
-     * especially in containerized environments or when running multiple tests.
-     */
-    private static final Map<String, String> jsonCache = new ConcurrentHashMap<>();
-    
-    /**
-     * Cache for deserialized objects.
-     * Key: File name + Class name
-     * Value: Deserialized object
-     * 
-     * This cache prevents repeated deserialization of the same JSON content,
-     * which can be CPU-intensive for complex objects.
-     */
-    private static final Map<String, Object> objectCache = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper;
+    private final TestDataConfig testDataConfig;
+
+    // Cache for JSON content to avoid repeated file I/O
+    private final ConcurrentHashMap<String, String> jsonContentCache = new ConcurrentHashMap<>();
+
+    // Cache for deserialized objects to avoid repeated deserialization
+    private final ConcurrentHashMap<String, Object> objectCache = new ConcurrentHashMap<>();
+
+    @Autowired
+    public TestDataFactory(ObjectMapper objectMapper, TestDataConfig testDataConfig) {
+        this.objectMapper = objectMapper;
+        this.objectMapper.registerModule(new JavaTimeModule());
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        this.testDataConfig = testDataConfig;
+    }
 
     /**
      * Creates a test deal instance.
      * Uses caching to optimize performance in test environments.
      * 
      * @return A new TestDeal instance
+     * @throws TestDataException if the deal cannot be created
      */
-    public static TestDeal createTestDeal() {
-        return getOrCreate("base-deal.json", TestDeal.class);
+    public TestDeal createTestDeal() {
+        try {
+            return createDeal(testDataConfig.getBaseDealPath(), TestDeal.class);
+        } catch (Exception e) {
+            log.error("Failed to create test deal", e);
+            throw new TestDataException("Failed to create test deal", e);
+        }
     }
 
     /**
@@ -83,65 +86,97 @@ public class TestDataFactory {
      * Uses caching to optimize performance in test environments.
      * 
      * @return A new FixedIncomeDerivativeDeal instance
+     * @throws TestDataException if the deal cannot be created
      */
-    public static FixedIncomeDerivativeDeal createFixedIncomeDerivativeDeal() {
-        return getOrCreate("fixed-income-derivative-deal.json", FixedIncomeDerivativeDeal.class);
-    }
-
-    /**
-     * Internal method to get or create a test object.
-     * Implements the double-caching strategy:
-     * 1. First checks object cache
-     * 2. If not found, gets JSON from cache or loads from file
-     * 3. Deserializes and caches the object
-     * 
-     * @param fileName The name of the JSON file
-     * @param clazz The target class type
-     * @return A cached or newly created instance
-     */
-    @SuppressWarnings("unchecked")
-    private static <T> T getOrCreate(String fileName, Class<T> clazz) {
-        String cacheKey = fileName + "_" + clazz.getName();
-        
-        // Check object cache first to avoid deserialization
-        T cachedObject = (T) objectCache.get(cacheKey);
-        if (cachedObject != null) {
-            return cachedObject;
-        }
-        
+    public FixedIncomeDerivativeDeal createFixedIncomeDerivativeDeal() {
         try {
-            // Get JSON content from cache or load from file
-            // computeIfAbsent is atomic and thread-safe
-            String json = jsonCache.computeIfAbsent(fileName, key -> {
-                try {
-                    return loadJson("test-data/deals/" + key);
-                } catch (IOException e) {
-                    throw new RuntimeException("Failed to load JSON file: " + key, e);
-                }
-            });
-            
-            // Deserialize and cache the object
-            T object = objectMapper.readValue(json, clazz);
-            objectCache.put(cacheKey, object);
-            return object;
-        } catch (IOException e) {
-            log.error("Error creating test object for file: {}", fileName, e);
-            throw new RuntimeException("Failed to create test object", e);
+            return createDeal(testDataConfig.getFixedIncomeDerivativeDealPath(), FixedIncomeDerivativeDeal.class);
+        } catch (Exception e) {
+            log.error("Failed to create fixed income derivative deal", e);
+            throw new TestDataException("Failed to create fixed income derivative deal", e);
         }
     }
 
     /**
-     * Loads JSON content from a classpath resource.
-     * This method is only called when the content is not in the cache.
+     * Creates a new fixed income derivative deal instance.
+     * Uses caching to optimize performance in test environments.
      * 
-     * @param path The path to the JSON file
-     * @return The JSON content as a string
-     * @throws IOException If the file cannot be read
+     * @return A new FixedIncomeDerivativeDeal instance with NEW status
+     * @throws TestDataException if the deal cannot be created
      */
-    private static String loadJson(String path) throws IOException {
-        ClassPathResource resource = new ClassPathResource(path);
-        try (InputStreamReader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
-            return FileCopyUtils.copyToString(reader);
+    public FixedIncomeDerivativeDeal createNewFixedIncomeDerivativeDeal() {
+        try {
+            return createDeal(testDataConfig.getNewDealPath(), FixedIncomeDerivativeDeal.class);
+        } catch (Exception e) {
+            log.error("Failed to create new fixed income derivative deal", e);
+            throw new TestDataException("Failed to create new fixed income derivative deal", e);
+        }
+    }
+
+    /**
+     * Creates a confirmed fixed income derivative deal instance.
+     * Uses caching to optimize performance in test environments.
+     * 
+     * @return A new FixedIncomeDerivativeDeal instance with CONFIRMED status
+     * @throws TestDataException if the deal cannot be created
+     */
+    public FixedIncomeDerivativeDeal createConfirmedFixedIncomeDerivativeDeal() {
+        try {
+            return createDeal(testDataConfig.getConfirmedDealPath(), FixedIncomeDerivativeDeal.class);
+        } catch (Exception e) {
+            log.error("Failed to create confirmed fixed income derivative deal", e);
+            throw new TestDataException("Failed to create confirmed fixed income derivative deal", e);
+        }
+    }
+
+    /**
+     * Creates an amended fixed income derivative deal instance.
+     * Uses caching to optimize performance in test environments.
+     * 
+     * @return A new FixedIncomeDerivativeDeal instance with AMENDED status
+     * @throws TestDataException if the deal cannot be created
+     */
+    public FixedIncomeDerivativeDeal createAmendedFixedIncomeDerivativeDeal() {
+        try {
+            return createDeal(testDataConfig.getAmendedDealPath(), FixedIncomeDerivativeDeal.class);
+        } catch (Exception e) {
+            log.error("Failed to create amended fixed income derivative deal", e);
+            throw new TestDataException("Failed to create amended fixed income derivative deal", e);
+        }
+    }
+
+    /**
+     * Creates a cancelled fixed income derivative deal instance.
+     * Uses caching to optimize performance in test environments.
+     * 
+     * @return A new FixedIncomeDerivativeDeal instance with CANCELLED status
+     * @throws TestDataException if the deal cannot be created
+     */
+    public FixedIncomeDerivativeDeal createCancelledFixedIncomeDerivativeDeal() {
+        try {
+            return createDeal(testDataConfig.getCancelledDealPath(), FixedIncomeDerivativeDeal.class);
+        } catch (Exception e) {
+            log.error("Failed to create cancelled fixed income derivative deal", e);
+            throw new TestDataException("Failed to create cancelled fixed income derivative deal", e);
+        }
+    }
+
+    /**
+     * Creates a deal with custom modifications.
+     * 
+     * @param dealClass The type of deal to create
+     * @param modifier A consumer that can modify the deal after creation
+     * @return A new deal instance with custom modifications
+     * @throws TestDataException if the deal cannot be created or modified
+     */
+    public <T extends Deal> T createDeal(Class<T> dealClass, Consumer<T> modifier) {
+        try {
+            T deal = createDeal(dealClass);
+            modifier.accept(deal);
+            return deal;
+        } catch (Exception e) {
+            log.error("Failed to create or modify deal of type {}", dealClass.getSimpleName(), e);
+            throw new TestDataException("Failed to create or modify deal", e);
         }
     }
 
@@ -151,24 +186,106 @@ public class TestDataFactory {
      * 
      * @param dealClass The type of deal to create
      * @return A new deal instance
-     * @throws IllegalArgumentException If the deal type is not supported
+     * @throws TestDataException if the deal cannot be created
      */
-    public static <T extends Deal> T createDeal(Class<T> dealClass) {
+    public <T extends Deal> T createDeal(Class<T> dealClass) {
         if (dealClass == TestDeal.class) {
             return (T) createTestDeal();
         } else if (dealClass == FixedIncomeDerivativeDeal.class) {
             return (T) createFixedIncomeDerivativeDeal();
         }
-        throw new IllegalArgumentException("Unsupported deal type: " + dealClass.getSimpleName());
+        throw new TestDataException("Unsupported deal type: " + dealClass.getSimpleName());
     }
-    
+
+    /**
+     * Internal method to get or create a test object.
+     * Implements the double-caching strategy:
+     * 1. First checks object cache
+     * 2. If not found, gets JSON from cache or loads from file
+     * 3. Deserializes and caches the object
+     * 
+     * @param filePath The path to the JSON file
+     * @param dealClass The type of deal to create
+     * @return A cached or newly created instance
+     * @throws TestDataException if the deal cannot be created
+     */
+    private <T extends Deal> T createDeal(String filePath, Class<T> dealClass) {
+        try {
+            return dealClass.cast(objectCache.computeIfAbsent(filePath, key -> {
+                String jsonContent = jsonContentCache.computeIfAbsent(filePath, this::loadJsonFromClasspath);
+                try {
+                    Map<String, Object> jsonMap = objectMapper.readValue(jsonContent, new TypeReference<Map<String, Object>>() {});
+                    T deal = objectMapper.convertValue(jsonMap, dealClass);
+                    validateDeal(deal);
+                    return deal;
+                } catch (Exception e) {
+                    log.error("Failed to deserialize deal from JSON: {}", filePath, e);
+                    throw new TestDataException("Failed to deserialize deal from JSON: " + filePath, e);
+                }
+            }));
+        } catch (Exception e) {
+            log.error("Failed to create deal from file: {}", filePath, e);
+            throw new TestDataException("Failed to create deal from file: " + filePath, e);
+        }
+    }
+
+    /**
+     * Loads JSON content from a classpath resource.
+     * This method is only called when the content is not in the cache.
+     * 
+     * @param filePath The path to the JSON file
+     * @return The JSON content as a string
+     * @throws TestDataException if the file cannot be read
+     */
+    private String loadJsonFromClasspath(String filePath) {
+        ClassPathResource resource = new ClassPathResource(filePath);
+        try (InputStreamReader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
+            return FileCopyUtils.copyToString(reader);
+        } catch (Exception e) {
+            log.error("Failed to load JSON from classpath: {}", filePath, e);
+            throw new TestDataException("Failed to load JSON from classpath: " + filePath, e);
+        }
+    }
+
+    /**
+     * Validates a deal to ensure it meets minimum requirements.
+     * 
+     * @param deal The deal to validate
+     * @throws TestDataException if the deal is invalid
+     */
+    private void validateDeal(Deal deal) {
+        if (deal == null) {
+            throw new TestDataException("Deal cannot be null");
+        }
+        if (deal.getDealId() == null || deal.getDealId().isEmpty()) {
+            throw new TestDataException("Deal ID is required");
+        }
+        if (deal.getDealType() == null || deal.getDealType().isEmpty()) {
+            throw new TestDataException("Deal type is required");
+        }
+    }
+
     /**
      * Clears both caches.
      * This method should be called between test classes to prevent memory leaks
      * and ensure test isolation.
      */
-    public static void clearCache() {
-        jsonCache.clear();
+    public void clearCache() {
+        jsonContentCache.clear();
         objectCache.clear();
+        log.debug("Test data caches cleared");
+    }
+}
+
+/**
+ * Custom exception for test data related errors.
+ */
+class TestDataException extends RuntimeException {
+    public TestDataException(String message) {
+        super(message);
+    }
+
+    public TestDataException(String message, Throwable cause) {
+        super(message, cause);
     }
 } 

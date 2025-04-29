@@ -1,5 +1,6 @@
 package com.magiccode.tradeingestion.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,25 +34,30 @@ public class ProcessingMetadata {
     /**
      * Current status of the processing (e.g., PENDING, IN_PROGRESS, COMPLETED, FAILED)
      */
+    @Column(name = "processing_status")
     private String processingStatus;
     
     /**
      * Timestamp when processing of the deal started
      */
+    @Column(name = "processing_start_time")
     private LocalDateTime processingStartTime;
     
     /**
      * Timestamp when processing of the deal ended
      */
+    @Column(name = "processing_end_time")
     private LocalDateTime processingEndTime;
     
     /**
      * Any errors encountered during processing
      */
+    @Column(name = "processing_errors")
     private String processingErrors;
     
     /**
      * Number of times the processing has been retried
      */
+    @Column(name = "processing_retry_count")
     private Integer retryCount;
 } 

@@ -1,0 +1,134 @@
+{
+  "messageHeader": {
+    "messageId": "UUID-amend-0003-v2",
+    "messageType": "FIXED_INCOME_DERIVATIVE_TRADE",
+    "schemaVersion": "2.0",
+    "messageFormat": "JSON",
+    "createdTimestamp": "2025-06-01T09:00:00Z",
+    "sourceSystem": "FROST",
+    "destinationSystem": "MTS",
+    "sensitivityLevel": "CONFIDENTIAL",
+    "securityTags": {
+      "encryption": "AES256",
+      "maskPII": true,
+      "dataClassification": "Confidential"
+    }
+  },
+  "deal": {
+    "dealId": "IRS-20250410-00001",
+    "dealType": "InterestRateSwap",
+    "status": "AMENDED",
+    "executionVenue": "OTC",
+    "tradeDate": "2025-04-10",
+    "valueDate": "2025-04-12",
+    "maturityDate": "2031-04-12",
+    "isBackDated": false,
+    "bookingInfo": {
+      "books": [
+        {
+          "location": "Sydney",
+          "bookId": "FIC-IRSYD01"
+        }
+      ]
+    },
+    "trader": {
+      "id": "TR123",
+      "name": "Encrypted (AES256)",
+      "desk": "Rates-Sydney"
+    }
+  },
+  "riskMetrics": {
+    "npv": {
+      "value": 15050.0,
+      "currency": "AUD"
+    },
+    "pv01": {
+      "value": 110.5,
+      "currency": "AUD"
+    },
+    "dv01": {
+      "value": 93.2,
+      "currency": "AUD"
+    }
+  },
+  "valuation": {
+    "modelId": "IRS-PV-Model-v1.5",
+    "priceSource": "Internal",
+    "valuationTimestamp": "2025-06-01T09:00:00Z",
+    "valuationCurrency": "AUD"
+  },
+  "legs": [
+    {
+      "legId": "L1",
+      "payOrReceive": "Pay",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Fixed",
+      "fixedRate": 0.0375,
+      "paymentFrequency": "P6M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    },
+    {
+      "legId": "L2",
+      "payOrReceive": "Receive",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Floating",
+      "floatingRateIndex": "BBSW",
+      "spread": 0.0015,
+      "resetFrequency": "P3M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    }
+  ],
+  "counterparty": {
+    "entityId": "CP-999999",
+    "legalName": "Encrypted (AES256)",
+    "lei": "5493001KJTIIGC8Y1R12",
+    "jurisdiction": "AU",
+    "confidentialityPolicy": {
+      "requiresMasking": true,
+      "retentionDays": 3650
+    }
+  },
+  "lifecycleEvent": {
+    "eventType": "Amendment",
+    "effectiveDate": "2025-06-01",
+    "priorDealId": "IRS-20250410-00001",
+    "approvalId": "APR-00056",
+    "changeDetails": {
+      "amendedFields": [
+        "maturityDate"
+      ],
+      "oldValues": {
+        "maturityDate": "2030-04-12"
+      },
+      "newValues": {
+        "maturityDate": "2031-04-12"
+      }
+    }
+  },
+  "audit": {
+    "createdBy": {
+      "actorId": "ops_user_01",
+      "actorType": "HUMAN"
+    },
+    "createdTimestamp": "2025-06-01T09:00:00Z",
+    "changeLog": [
+      {
+        "changedBy": {
+          "actorId": "ops_user_01",
+          "actorType": "HUMAN"
+        },
+        "changeTimestamp": "2025-06-01T09:00:00Z",
+        "changeType": "Amendment",
+        "comments": "Extended maturity date by 1 year"
+      }
+    ]
+  }
+}

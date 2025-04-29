@@ -1,148 +1,118 @@
 package com.magiccode.tradeingestion.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Represents a leg of a financial derivative deal.
- * 
- * A deal leg is a component of a derivative contract that represents
- * one side of the cash flow exchange. This class supports:
- * 1. Fixed and floating rate legs
- * 2. Various rate types and conventions
- * 3. Notional amount management
- * 4. Payment frequency and business day conventions
- * 5. Rate caps and floors
- * 
- * The class is designed to be embedded within a Deal entity
- * and supports both fixed and floating rate instruments.
- * 
- * @see FixedIncomeDerivativeDeal
- * @see NotionalAmount
+ * Each leg can be either a fixed or floating rate component.
  */
+@Entity
+@Table(name = "deal_leg")
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Embeddable
-public class DealLeg {
-    
-    @Column(name = "leg_id")
-    private String legId;
-    
-    @Column(name = "leg_type")
-    private String legType;
-    
-    @Column(name = "leg_currency")
-    private String legCurrency;
-    
-    @Column(name = "leg_notional")
-    private BigDecimal legNotional;
-    
-    @Column(name = "leg_rate")
-    private BigDecimal legRate;
-    
-    @Column(name = "leg_rate_type")
-    private String rateType;
-    
-    @Column(name = "leg_start_date")
-    private LocalDate legStartDate;
-    
-    @Column(name = "leg_end_date")
-    private LocalDate legEndDate;
-    
-    @Column(name = "leg_day_count_convention")
-    private String legDayCountConvention;
-    
-    @Column(name = "leg_business_day_convention")
-    private String legBusinessDayConvention;
-    
-    @Column(name = "leg_payment_frequency")
-    private String legPaymentFrequency;
-    
-    @Column(name = "leg_index")
-    private String legIndex;
-    
-    @Column(name = "leg_spread")
-    private BigDecimal legSpread;
-    
-    @Column(name = "leg_margin")
-    private BigDecimal legMargin;
-    
-    @Column(name = "leg_cap_rate")
-    private BigDecimal legCapRate;
-    
-    @Column(name = "leg_floor_rate")
-    private BigDecimal legFloorRate;
+@SuperBuilder(toBuilder = true)
+public class DealLeg implements Serializable {
+    private static final long serialVersionUID = 1L;
 
-    @Column(name = "leg_pay_or_receive")
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "derivative_deal_id", nullable = false)
+    private FixedIncomeDerivativeDeal deal;
+
+    @NotBlank(message = "Leg ID is required")
+    @Column(name = "leg_id", nullable = false)
+    private String legId;
+
+    @NotBlank(message = "Leg type is required")
+    @Column(name = "leg_type", nullable = false)
+    private String legType;
+
+    @NotBlank(message = "Pay or receive is required")
+    @Column(name = "pay_or_receive", nullable = false)
     private String payOrReceive;
 
-    /**
-     * Inner class representing the notional amount of a deal leg.
-     * This class encapsulates both the amount and currency of the notional.
-     */
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class NotionalAmount {
-        private BigDecimal amount;
-        private String currency;
-    }
+    @NotBlank(message = "Rate type is required")
+    @Column(name = "rate_type", nullable = false)
+    private String rateType;
 
+    @NotBlank(message = "Leg currency is required")
+    @Column(name = "leg_currency", nullable = false)
+    private String legCurrency;
+
+    @Embedded
     private NotionalAmount notionalAmount;
 
-    /**
-     * Sets the pay or receive indicator for this leg.
-     * 
-     * @param payOrReceive The direction of cash flow ("PAY" or "RECEIVE")
-     * @return This DealLeg instance for method chaining
-     */
-    public DealLeg payOrReceive(String payOrReceive) {
-        this.payOrReceive = payOrReceive;
-        return this;
+    @Column(name = "fixed_rate", precision = 10, scale = 6)
+    private BigDecimal fixedRate;
+
+    @Column(name = "floating_rate_index")
+    private String floatingRateIndex;
+
+    @Column(name = "floating_rate_spread", precision = 10, scale = 6)
+    private BigDecimal floatingRateSpread;
+
+    @Column(name = "payment_frequency")
+    private String paymentFrequency;
+
+    @Column(name = "day_count_convention")
+    private String dayCountConvention;
+
+    @Column(name = "business_day_convention")
+    private String businessDayConvention;
+
+    @Column(name = "version", nullable = false)
+    @Version
+    private Long version;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
     /**
-     * Sets the rate type for this leg.
-     * 
-     * @param rateType The type of rate ("FIXED" or "FLOATING")
-     * @return This DealLeg instance for method chaining
+     * Configures this leg as a fixed rate leg.
      */
-    public DealLeg rateType(String rateType) {
-        this.legType = rateType;
-        return this;
-    }
-
-    /**
-     * Configures this leg as a fixed rate leg with the specified rate.
-     * 
-     * @param rate The fixed rate to be applied
-     * @return This DealLeg instance for method chaining
-     */
-    public DealLeg fixedRate(BigDecimal rate) {
-        this.legRate = rate;
+    public void configureAsFixedRateLeg(BigDecimal fixedRate) {
         this.rateType = "FIXED";
-        return this;
+        this.fixedRate = fixedRate;
+        this.floatingRateIndex = null;
+        this.floatingRateSpread = null;
     }
 
     /**
-     * Configures this leg as a floating rate leg with the specified index.
-     * 
-     * @param index The floating rate index to be used
-     * @return This DealLeg instance for method chaining
+     * Configures this leg as a floating rate leg.
      */
-    public DealLeg floatingRateIndex(String index) {
-        this.legIndex = index;
+    public void configureAsFloatingRateLeg(String floatingRateIndex, BigDecimal floatingRateSpread) {
         this.rateType = "FLOATING";
-        return this;
+        this.fixedRate = null;
+        this.floatingRateIndex = floatingRateIndex;
+        this.floatingRateSpread = floatingRateSpread;
     }
 } 

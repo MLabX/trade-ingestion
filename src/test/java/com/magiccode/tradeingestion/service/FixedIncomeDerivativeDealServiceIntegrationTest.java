@@ -1,20 +1,23 @@
 package com.magiccode.tradeingestion.service;
 
-import com.magiccode.tradeingestion.config.TestConfig;
+import com.magiccode.tradeingestion.BaseIntegrationTest;
+import com.magiccode.tradeingestion.config.PostgresTestConfig;
 import com.magiccode.tradeingestion.model.FixedIncomeDerivativeDeal;
 import com.magiccode.tradeingestion.model.DealLeg;
 import com.magiccode.tradeingestion.model.BookingInfo;
 import com.magiccode.tradeingestion.model.TraderInfo;
 import com.magiccode.tradeingestion.model.CounterpartyInfo;
+import com.magiccode.tradeingestion.model.NotionalAmount;
 import com.magiccode.tradeingestion.repository.DealRepository;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.context.annotation.Import;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,10 +27,10 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@ActiveProfiles("test")
-@Import(TestConfig.class)
+@ActiveProfiles("postgres")
+@Import(PostgresTestConfig.class)
 @Transactional
-public class FixedIncomeDerivativeDealServiceIntegrationTest {
+public class FixedIncomeDerivativeDealServiceIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private FixedIncomeDerivativeDealService dealService;
@@ -38,36 +41,33 @@ public class FixedIncomeDerivativeDealServiceIntegrationTest {
     @Autowired
     private JmsTemplate jmsTemplate;
 
+    @Autowired
+    private Flyway flyway;
+
     private FixedIncomeDerivativeDeal testDeal;
     private LocalDateTime now;
 
     @BeforeEach
     public void setUp() {
-        // Clear the database before each test
-        dealRepository.deleteAll();
+        // Clean and migrate the database before each test
+        flyway.clean();
+        flyway.migrate();
 
         // Create test deal legs
         DealLeg payLeg = DealLeg.builder()
-            .legId("L1")
-            .payOrReceive("Pay")
-            .notionalAmount(new DealLeg.NotionalAmount(new BigDecimal("10000000"), "AUD"))
-            .legType("Fixed")
-            .legRate(new BigDecimal("0.0375"))
-            .legPaymentFrequency("P6M")
-            .legDayCountConvention("ACT/365")
-            .legBusinessDayConvention("ModifiedFollowing")
+            .legId("PAY-1")
+            .legType("PAY")
+            .legCurrency("USD")
+            .notionalAmount(new NotionalAmount(BigDecimal.valueOf(1000000), "USD"))
+            .fixedRate(BigDecimal.valueOf(0.05))
             .build();
 
         DealLeg receiveLeg = DealLeg.builder()
-            .legId("L2")
-            .payOrReceive("Receive")
-            .notionalAmount(new DealLeg.NotionalAmount(new BigDecimal("10000000"), "AUD"))
-            .legType("Floating")
-            .legIndex("BBSW")
-            .legSpread(new BigDecimal("0.0015"))
-            .legPaymentFrequency("P3M")
-            .legDayCountConvention("ACT/365")
-            .legBusinessDayConvention("ModifiedFollowing")
+            .legId("REC-1")
+            .legType("RECEIVE")
+            .legCurrency("EUR")
+            .notionalAmount(new NotionalAmount(BigDecimal.valueOf(900000), "EUR"))
+            .floatingRateIndex("EURIBOR")
             .build();
 
         // Create a test deal
@@ -82,7 +82,12 @@ public class FixedIncomeDerivativeDealServiceIntegrationTest {
             .status("NEW")
             .isBackDated(false)
             .bookingInfo(BookingInfo.builder()
-                .books(List.of(new BookingInfo.Book("FIC-IRSYD01", "Sydney IRS", "Trading", "AUD")))
+                .books(List.of(BookingInfo.Book.builder()
+                    .bookCode("FIC-IRSYD01")
+                    .bookName("Sydney IRS")
+                    .bookType("Trading")
+                    .bookCurrency("AUD")
+                    .build()))
                 .build())
             .trader(TraderInfo.builder()
                 .id("TR123")
@@ -137,24 +142,20 @@ public class FixedIncomeDerivativeDealServiceIntegrationTest {
         dealService.processDeal(testDeal);
 
         // Create another deal
-        FixedIncomeDerivativeDeal anotherDeal = FixedIncomeDerivativeDeal.createNew(
-            "DEAL-124",
-            "InterestRateSwap",
-            "OTC",
-            now.toLocalDate(),
-            now.toLocalDate().plusDays(2),
-            now.toLocalDate().plusYears(5),
-            "NEW",
-            false,
-            null, // bookingInfo
-            null, // trader
-            null, // counterparty
-            null  // legs
-        );
-        anotherDeal.setVersion(1L);
-        anotherDeal.setCreatedAt(now);
-        anotherDeal.setUpdatedAt(now);
-        anotherDeal.setProcessedAt(now);
+        FixedIncomeDerivativeDeal anotherDeal = FixedIncomeDerivativeDeal.builder()
+            .dealId("DEAL-124")
+            .dealType("InterestRateSwap")
+            .executionVenue("OTC")
+            .tradeDate(now.toLocalDate())
+            .valueDate(now.toLocalDate().plusDays(2))
+            .maturityDate(now.toLocalDate().plusYears(5))
+            .status("NEW")
+            .isBackDated(false)
+            .version(1L)
+            .createdAt(now)
+            .updatedAt(now)
+            .processedAt(now)
+            .build();
         dealService.processDeal(anotherDeal);
 
         // Act
@@ -171,24 +172,20 @@ public class FixedIncomeDerivativeDealServiceIntegrationTest {
         dealService.processDeal(testDeal);
 
         // Create another deal with different type
-        FixedIncomeDerivativeDeal anotherDeal = FixedIncomeDerivativeDeal.createNew(
-            "DEAL-124",
-            "CrossCurrencySwap",
-            "OTC",
-            now.toLocalDate(),
-            now.toLocalDate().plusDays(2),
-            now.toLocalDate().plusYears(5),
-            "NEW",
-            false,
-            null, // bookingInfo
-            null, // trader
-            null, // counterparty
-            null  // legs
-        );
-        anotherDeal.setVersion(1L);
-        anotherDeal.setCreatedAt(now);
-        anotherDeal.setUpdatedAt(now);
-        anotherDeal.setProcessedAt(now);
+        FixedIncomeDerivativeDeal anotherDeal = FixedIncomeDerivativeDeal.builder()
+            .dealId("DEAL-124")
+            .dealType("CrossCurrencySwap")
+            .executionVenue("OTC")
+            .tradeDate(now.toLocalDate())
+            .valueDate(now.toLocalDate().plusDays(2))
+            .maturityDate(now.toLocalDate().plusYears(5))
+            .status("NEW")
+            .isBackDated(false)
+            .version(1L)
+            .createdAt(now)
+            .updatedAt(now)
+            .processedAt(now)
+            .build();
         dealService.processDeal(anotherDeal);
 
         // Act

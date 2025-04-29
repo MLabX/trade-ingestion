@@ -1,109 +1,141 @@
 package com.magiccode.tradeingestion.config;
 
-import jakarta.persistence.EntityManagerFactory;
-import org.springframework.boot.test.context.TestConfiguration;
+import com.magiccode.tradeingestion.model.FixedIncomeDerivativeDeal;
+import com.magiccode.tradeingestion.service.transformation.DealTransformationService;
+import com.magiccode.tradeingestion.service.transformation.DefaultDealTransformationService;
+import org.flywaydb.core.Flyway;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.support.destination.DynamicDestinationResolver;
-import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.utility.DockerImageName;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.context.annotation.Primary;
+import org.springframework.orm.jpa.JpaVendorAdapter;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import org.h2.jdbcx.JdbcDataSource;
-import jakarta.annotation.PreDestroy;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.sql.DataSource;
 import java.util.Properties;
+import java.time.Duration;
 
+/**
+ * Configuration for unit tests that mocks external dependencies.
+ * This configuration should be used for pure unit tests that don't require
+ * actual external services like databases or message brokers.
+ */
 @TestConfiguration
+@EnableCaching
 public class UnitTestConfig {
 
-    private static final GenericContainer<?> REDIS_CONTAINER = new GenericContainer<>(DockerImageName.parse("redis:6.2.6"))
-        .withExposedPorts(6379);
+    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:13")
+            .withDatabaseName("testdb")
+            .withUsername("test")
+            .withPassword("test");
 
     static {
-        REDIS_CONTAINER.start();
-    }
-
-    private LettuceConnectionFactory lettuceConnectionFactory;
-
-    @PreDestroy
-    public void cleanUp() {
-        if (lettuceConnectionFactory != null) {
-            lettuceConnectionFactory.destroy();
-        }
-        REDIS_CONTAINER.stop();
+        postgres.start();
     }
 
     @Bean
-    public LettuceConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(
-            REDIS_CONTAINER.getHost(),
-            REDIS_CONTAINER.getMappedPort(6379)
-        );
-        lettuceConnectionFactory = new LettuceConnectionFactory(config);
-        return lettuceConnectionFactory;
-    }
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate() {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory());
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        return template;
-    }
-
-    @Bean
+    @Primary
     public DataSource dataSource() {
-        JdbcDataSource dataSource = new JdbcDataSource();
-        dataSource.setURL("jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE");
-        dataSource.setUser("sa");
-        dataSource.setPassword("");
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("org.postgresql.Driver");
+        dataSource.setUrl(postgres.getJdbcUrl());
+        dataSource.setUsername(postgres.getUsername());
+        dataSource.setPassword(postgres.getPassword());
         return dataSource;
     }
 
     @Bean
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
+    public Flyway flyway(DataSource dataSource) {
+        Flyway flyway = Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/migration")
+            .baselineOnMigrate(true)
+            .validateOnMigrate(true)
+            .table("flyway_schema_history_test")
+            .load();
+        flyway.migrate();
+        return flyway;
+    }
+
+    @Bean
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource dataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setDataSource(dataSource());
+        em.setDataSource(dataSource);
         em.setPackagesToScan("com.magiccode.tradeingestion.model");
 
-        HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
+        JpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
         em.setJpaVendorAdapter(vendorAdapter);
 
         Properties properties = new Properties();
+        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         properties.setProperty("hibernate.hbm2ddl.auto", "create-drop");
-        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
-        properties.setProperty("hibernate.show_sql", "true");
         em.setJpaProperties(properties);
 
         return em;
     }
 
     @Bean
-    public PlatformTransactionManager transactionManager(EntityManagerFactory entityManagerFactory) {
-        return new JpaTransactionManager(entityManagerFactory);
-    }
-
-    @Bean
-    public DynamicDestinationResolver destinationResolver() {
-        return new DynamicDestinationResolver();
+    public PlatformTransactionManager transactionManager(DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
     }
 
     @Bean
     public JmsTemplate jmsTemplate() {
-        JmsTemplate template = new JmsTemplate();
-        template.setDestinationResolver(destinationResolver());
-        template.setPubSubDomain(false);
-        template.setReceiveTimeout(1000);
+        return new JmsTemplate();
+    }
+
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setEnableTransactionSupport(true);
+        template.afterPropertiesSet();
         return template;
     }
-} 
+
+    @Bean
+    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
+            .entryTtl(Duration.ofMinutes(30))
+            .disableCachingNullValues()
+            .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
+
+        return RedisCacheManager.builder(connectionFactory)
+            .cacheDefaults(defaultConfig)
+            .withCacheConfiguration("counterparties",
+                RedisCacheConfiguration.defaultCacheConfig()
+                    .entryTtl(Duration.ofHours(24)))
+            .withCacheConfiguration("instruments",
+                RedisCacheConfiguration.defaultCacheConfig()
+                    .entryTtl(Duration.ofHours(24)))
+            .withCacheConfiguration("deals",
+                RedisCacheConfiguration.defaultCacheConfig()
+                    .entryTtl(Duration.ofHours(1)))
+            .build();
+    }
+}

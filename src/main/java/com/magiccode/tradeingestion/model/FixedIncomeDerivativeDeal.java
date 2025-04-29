@@ -7,12 +7,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.apache.catalina.LifecycleEvent;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,6 +53,7 @@ public class FixedIncomeDerivativeDeal extends Deal implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "derivative_deal_id", unique = true, nullable = false)
     private UUID id;
 
     @NotBlank(message = "Deal ID is required")
@@ -79,14 +80,11 @@ public class FixedIncomeDerivativeDeal extends Deal implements Serializable {
     @Column(name = "maturity_date", nullable = false)
     private LocalDate maturityDate;
 
-    @NotBlank(message = "Status is required")
-    @Column(name = "status", nullable = false)
-    private String status;
-
     @Column(name = "is_back_dated", nullable = false)
     private boolean isBackDated;
 
-    @Embedded
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "booking_info_id")
     private BookingInfo bookingInfo;
 
     @Embedded
@@ -95,8 +93,7 @@ public class FixedIncomeDerivativeDeal extends Deal implements Serializable {
     @Embedded
     private CounterpartyInfo counterparty;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "deal_id", referencedColumnName = "deal_id")
+    @OneToMany(mappedBy = "deal", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DealLeg> legs;
 
     @Embedded
@@ -109,7 +106,7 @@ public class FixedIncomeDerivativeDeal extends Deal implements Serializable {
     private RegulatoryReporting regulatoryReporting;
 
     @Embedded
-    private LifecycleEvent lifecycleEvent;
+    private DealLifecycleEvent lifecycleEvent;
 
     @Embedded
     private ExternalReferences externalReferences;
@@ -125,6 +122,12 @@ public class FixedIncomeDerivativeDeal extends Deal implements Serializable {
 
     @Embedded
     private ProcessingMetadata processingMetadata;
+
+    @Embedded
+    private MessageHeader messageHeader;
+
+    @Embedded
+    private CustomAttributes customAttributes;
 
     @Column(name = "version", nullable = false)
     @Version
@@ -169,7 +172,6 @@ public class FixedIncomeDerivativeDeal extends Deal implements Serializable {
      * @param tradeDate The date when the deal was traded
      * @param valueDate The date when the deal becomes effective
      * @param maturityDate The date when the deal matures
-     * @param status The current status of the deal
      * @param isBackDated Whether the deal is back-dated
      * @param bookingInfo The booking information for the deal
      * @param trader The trader information
@@ -184,7 +186,6 @@ public class FixedIncomeDerivativeDeal extends Deal implements Serializable {
         LocalDate tradeDate,
         LocalDate valueDate,
         LocalDate maturityDate,
-        String status,
         boolean isBackDated,
         BookingInfo bookingInfo,
         TraderInfo trader,
@@ -198,7 +199,6 @@ public class FixedIncomeDerivativeDeal extends Deal implements Serializable {
             .tradeDate(tradeDate)
             .valueDate(valueDate)
             .maturityDate(maturityDate)
-            .status(status)
             .isBackDated(isBackDated)
             .bookingInfo(bookingInfo)
             .trader(trader)

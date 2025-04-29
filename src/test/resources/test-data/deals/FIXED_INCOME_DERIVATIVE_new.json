@@ -1,0 +1,112 @@
+{
+  "messageHeader": {
+    "messageId": "UUID-new-0001-v2",
+    "messageType": "FIXED_INCOME_DERIVATIVE_TRADE",
+    "schemaVersion": "2.0",
+    "messageFormat": "JSON",
+    "createdTimestamp": "2025-04-10T10:00:00Z",
+    "sourceSystem": "FROST",
+    "destinationSystem": "MTS",
+    "sensitivityLevel": "CONFIDENTIAL",
+    "securityTags": {
+      "encryption": "AES256",
+      "maskPII": true,
+      "dataClassification": "Confidential"
+    }
+  },
+  "deal": {
+    "dealId": "IRS-20250410-00001",
+    "dealType": "InterestRateSwap",
+    "status": "NEW",
+    "executionVenue": "OTC",
+    "tradeDate": "2025-04-10",
+    "valueDate": "2025-04-12",
+    "maturityDate": "2030-04-12",
+    "isBackDated": false,
+    "bookingInfo": {
+      "books": [
+        {
+          "location": "Sydney",
+          "bookId": "FIC-IRSYD01"
+        }
+      ]
+    },
+    "trader": {
+      "id": "TR123",
+      "name": "Encrypted (AES256)",
+      "desk": "Rates-Sydney"
+    }
+  },
+  "riskMetrics": {
+    "npv": {
+      "value": 0,
+      "currency": "AUD"
+    },
+    "pv01": {
+      "value": 0,
+      "currency": "AUD"
+    },
+    "dv01": {
+      "value": 0,
+      "currency": "AUD"
+    }
+  },
+  "valuation": {
+    "modelId": "TBD",
+    "priceSource": "Pending",
+    "valuationTimestamp": "2025-04-10T10:00:00Z",
+    "valuationCurrency": "AUD"
+  },
+  "legs": [
+    {
+      "legId": "L1",
+      "payOrReceive": "Pay",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Fixed",
+      "fixedRate": 0.0375,
+      "paymentFrequency": "P6M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    },
+    {
+      "legId": "L2",
+      "payOrReceive": "Receive",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Floating",
+      "floatingRateIndex": "BBSW",
+      "spread": 0.0015,
+      "resetFrequency": "P3M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    }
+  ],
+  "counterparty": {
+    "entityId": "CP-999999",
+    "legalName": "Encrypted (AES256)",
+    "lei": "5493001KJTIIGC8Y1R12",
+    "jurisdiction": "AU",
+    "confidentialityPolicy": {
+      "requiresMasking": true,
+      "retentionDays": 3650
+    }
+  },
+  "lifecycleEvent": {
+    "eventType": "Initiation",
+    "effectiveDate": "2025-04-10",
+    "priorDealId": null
+  },
+  "audit": {
+    "createdBy": {
+      "actorId": "trader_jdoe",
+      "actorType": "HUMAN"
+    },
+    "createdTimestamp": "2025-04-10T10:00:00Z",
+    "changeLog": []
+  }
+}

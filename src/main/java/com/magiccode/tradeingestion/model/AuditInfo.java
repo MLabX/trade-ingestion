@@ -1,6 +1,8 @@
 package com.magiccode.tradeingestion.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.Embedded;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,22 +34,26 @@ import java.time.LocalDateTime;
 @Embeddable
 public class AuditInfo {
     /**
-     * Username or identifier of the user who created the record
+     * User or system that created the record
      */
-    private String createdBy;
-    
+    @Embedded
+    private Actor createdBy;
+
     /**
      * Date and time when the record was created
      */
+    @Column(name = "audit_created_date")
     private LocalDateTime createdDate;
-    
+
     /**
-     * Username or identifier of the user who last modified the record
+     * User or system that last modified the record
      */
-    private String lastModifiedBy;
-    
+    @Embedded
+    private Actor lastModifiedBy;
+
     /**
      * Date and time when the record was last modified
      */
+    @Column(name = "audit_last_modified_date")
     private LocalDateTime lastModifiedDate;
 } 

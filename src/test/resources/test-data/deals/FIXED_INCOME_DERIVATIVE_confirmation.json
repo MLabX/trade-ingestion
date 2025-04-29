@@ -1,0 +1,110 @@
+{
+  "messageHeader": {
+    "messageId": "UUID-conf-0002-v2",
+    "messageType": "FIXED_INCOME_DERIVATIVE_TRADE",
+    "schemaVersion": "2.0",
+    "messageFormat": "JSON",
+    "createdTimestamp": "2025-04-11T08:00:00Z",
+    "sourceSystem": "FROST",
+    "destinationSystem": "MTS",
+    "sensitivityLevel": "CONFIDENTIAL",
+    "securityTags": {
+      "encryption": "AES256",
+      "maskPII": true,
+      "dataClassification": "Confidential"
+    }
+  },
+  "deal": {
+    "dealId": "IRS-20250410-00001",
+    "dealType": "InterestRateSwap",
+    "status": "CONFIRMED",
+    "executionVenue": "OTC",
+    "tradeDate": "2025-04-10",
+    "valueDate": "2025-04-12",
+    "maturityDate": "2030-04-12",
+    "isBackDated": false
+  },
+  "riskMetrics": {
+    "npv": {
+      "value": 15200.55,
+      "currency": "AUD"
+    },
+    "pv01": {
+      "value": 112.7,
+      "currency": "AUD"
+    },
+    "dv01": {
+      "value": 95.3,
+      "currency": "AUD"
+    }
+  },
+  "valuation": {
+    "modelId": "IRS-PV-Model-v1.4",
+    "priceSource": "Internal",
+    "valuationTimestamp": "2025-04-10T09:50:00Z",
+    "valuationCurrency": "AUD"
+  },
+  "legs": [
+    {
+      "legId": "L1",
+      "payOrReceive": "Pay",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Fixed",
+      "fixedRate": 0.0375,
+      "paymentFrequency": "P6M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    },
+    {
+      "legId": "L2",
+      "payOrReceive": "Receive",
+      "notionalAmount": {
+        "amount": 10000000,
+        "currency": "AUD"
+      },
+      "rateType": "Floating",
+      "floatingRateIndex": "BBSW",
+      "spread": 0.0015,
+      "resetFrequency": "P3M",
+      "dayCountConvention": "ACT/365",
+      "businessDayConvention": "ModifiedFollowing"
+    }
+  ],
+  "counterparty": {
+    "entityId": "CP-999999",
+    "legalName": "Encrypted (AES256)",
+    "lei": "5493001KJTIIGC8Y1R12",
+    "jurisdiction": "AU",
+    "confidentialityPolicy": {
+      "requiresMasking": true,
+      "retentionDays": 3650
+    }
+  },
+  "lifecycleEvent": {
+    "eventType": "Trade Confirmation",
+    "effectiveDate": "2025-04-11",
+    "priorDealId": "IRS-20250410-00001",
+    "confirmationDocumentId": "CONF-DOC-20250411-00001"
+  },
+  "audit": {
+    "createdBy": {
+      "actorId": "system_conf_bot",
+      "actorType": "SYSTEM"
+    },
+    "createdTimestamp": "2025-04-11T08:00:00Z",
+    "changeLog": [
+      {
+        "changedBy": {
+          "actorId": "system_conf_bot",
+          "actorType": "SYSTEM"
+        },
+        "changeTimestamp": "2025-04-11T08:00:00Z",
+        "changeType": "Trade Confirmation",
+        "comments": "Trade confirmed against counterparty"
+      }
+    ]
+  }
+}

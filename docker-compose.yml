@@ -1,23 +1,41 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15
+    container_name: trade-ingestion-postgres
+    environment:
+      POSTGRES_DB: trade_ingestion
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   solace:
     image: solace/solace-pubsub-standard:latest
-    container_name: solace
+    container_name: trade-ingestion-solace
     ports:
-      - "55555:55555"  # SMF
-      - "8080:8080"    # SEMP
-      - "8008:8008"    # REST
+      - "1883:1883"
+      - "5672:5672"
+      - "8008:8008"
+      - "8080:8080"
+      - "9000:9000"
+      - "55556:55555"
     environment:
       - username_admin_globalaccesslevel=admin
       - username_admin_password=admin
-    volumes:
-      - solace-data:/var/lib/solace
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/SEMP"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/SEMP/v2/config/about/api || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 volumes:
-  solace-data: 
+  postgres_data: 

@@ -1,7 +1,9 @@
 package com.magiccode.tradeingestion.listener;
 
 import com.magiccode.tradeingestion.model.Deal;
+import com.magiccode.tradeingestion.model.DealLeg;
 import com.magiccode.tradeingestion.model.FixedIncomeDerivativeDeal;
+import com.magiccode.tradeingestion.model.NotionalAmount;
 import com.magiccode.tradeingestion.service.DealIngestionService;
 import com.magiccode.tradeingestion.service.DealValidationService;
 import com.magiccode.tradeingestion.service.DealTransformationService;
@@ -18,6 +20,8 @@ import jakarta.jms.Message;
 import jakarta.jms.Session;
 import jakarta.jms.TextMessage;
 import java.util.List;
+import java.time.LocalDate;
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,74 +60,96 @@ class DealMessageListenerTest {
     private FixedIncomeDerivativeDeal testDeal;
 
     @BeforeEach
-    void setUp() throws Exception {
-        testDeal = new FixedIncomeDerivativeDeal();
-        testDeal.setDealId("TEST-001");
-        when(textMessage.getText()).thenReturn("{\"dealId\":\"TEST-001\"}");
-    }
-
-    @Test
-    void whenValidMessage_thenProcessDeal() throws Exception {
-        // Setup
-        when(dealService.processDeal(any(Deal.class))).thenReturn(testDeal);
-        when(validationService.validateDeal(any(Deal.class))).thenReturn(List.of());
-
-        // Execute
-        listener.onMessage(textMessage, session, headerAccessor);
-
-        // Verify
-        verify(dealService).processDeal(any(Deal.class));
-        verify(validationService).validateDeal(any(Deal.class));
-        verify(jmsTemplate, never()).convertAndSend(eq(DLQ_DESTINATION), any(String.class));
-    }
-
-    @Test
-    void whenInvalidMessage_thenSendToDlq() throws Exception {
-        // Arrange
-        when(textMessage.getText()).thenReturn("invalid json");
-
-        // Act
-        listener.onMessage(textMessage, session, headerAccessor);
-
-        // Assert
-        verify(jmsTemplate).convertAndSend(eq(DLQ_DESTINATION), eq(textMessage));
-        verifyNoInteractions(dealService, validationService);
-    }
-
-    @Test
-    void whenProcessingFails_thenSendToDlq() throws Exception {
-        // Setup
-        when(dealService.processDeal(any(Deal.class))).thenThrow(new DealProcessingException("Processing failed"));
-        when(validationService.validateDeal(any(Deal.class))).thenReturn(List.of());
-
-        // Execute
-        listener.onMessage(textMessage, session, headerAccessor);
-
-        // Verify
-        verify(dealService).processDeal(any(Deal.class));
-        verify(validationService).validateDeal(any(Deal.class));
-        verify(jmsTemplate).convertAndSend(eq(DLQ_DESTINATION), eq(textMessage));
-    }
-
-    @Test
-    void whenValidationFails_thenSendToDlq() throws Exception {
-        // Setup
-        when(validationService.validateDeal(any(Deal.class)))
-            .thenReturn(List.of("Invalid deal: missing required fields"));
-
-        // Execute
-        listener.onMessage(textMessage, session, headerAccessor);
-
-        // Verify
-        verify(validationService).validateDeal(any(Deal.class));
-        verify(dealService, never()).processDeal(any(Deal.class));
-        verify(jmsTemplate).convertAndSend(eq(DLQ_DESTINATION), eq(textMessage));
+    void setUp() {
+        testDeal = createTestDeal();
     }
 
     @Test
     void whenNullMessage_thenThrowException() {
-        // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> listener.onMessage(null, session, headerAccessor));
-        verifyNoMoreInteractions(dealService, jmsTemplate, validationService);
+        // When/Then
+        assertThrows(IllegalArgumentException.class, () -> listener.onMessage(null, null, null));
+        verifyNoInteractions(dealService, jmsTemplate);
+    }
+
+    @Test
+    void whenValidMessage_thenProcessDeal() throws Exception {
+        // Given
+        when(message.getBody(Deal.class)).thenReturn(testDeal);
+        when(dealService.processDeal(testDeal)).thenReturn(testDeal);
+
+        // When
+        listener.onMessage(message, null, null);
+
+        // Then
+        verify(dealService).processDeal(testDeal);
+        verifyNoMoreInteractions(jmsTemplate);
+    }
+
+    @Test
+    void whenInvalidMessage_thenSendToDlq() throws Exception {
+        // Given
+        when(message.getBody(Deal.class)).thenReturn(null);
+
+        // When/Then
+        assertThrows(IllegalArgumentException.class, () -> listener.onMessage(message, null, null));
+        verify(jmsTemplate).convertAndSend(eq(DLQ_DESTINATION), eq(message));
+        verifyNoInteractions(dealService);
+    }
+
+    @Test
+    void whenProcessingFails_thenSendToDlq() throws Exception {
+        // Given
+        when(message.getBody(Deal.class)).thenReturn(testDeal);
+        when(dealService.processDeal(testDeal)).thenThrow(new DealProcessingException("Processing failed"));
+
+        // When/Then
+        assertThrows(DealProcessingException.class, () -> listener.onMessage(message, null, null));
+        verify(dealService).processDeal(testDeal);
+        verify(jmsTemplate).convertAndSend(eq(DLQ_DESTINATION), eq(message));
+    }
+
+    @Test
+    void whenValidationFails_thenSendToDlq() throws Exception {
+        // Given
+        when(message.getBody(Deal.class)).thenReturn(testDeal);
+        when(dealService.processDeal(testDeal)).thenThrow(new IllegalArgumentException("Validation failed"));
+
+        // When/Then
+        assertThrows(IllegalArgumentException.class, () -> listener.onMessage(message, null, null));
+        verify(dealService).processDeal(testDeal);
+        verify(jmsTemplate).convertAndSend(eq(DLQ_DESTINATION), eq(message));
+    }
+
+    private FixedIncomeDerivativeDeal createTestDeal() {
+        DealLeg payLeg = DealLeg.builder()
+            .legId("PAY-1")
+            .legType("PAY")
+            .legCurrency("USD")
+            .notionalAmount(new NotionalAmount(BigDecimal.valueOf(1000000), "USD"))
+            .fixedRate(BigDecimal.valueOf(0.05))
+            .build();
+
+        DealLeg receiveLeg = DealLeg.builder()
+            .legId("REC-1")
+            .legType("RECEIVE")
+            .legCurrency("EUR")
+            .notionalAmount(new NotionalAmount(BigDecimal.valueOf(900000), "EUR"))
+            .floatingRateIndex("EURIBOR")
+            .build();
+
+        return FixedIncomeDerivativeDeal.builder()
+            .dealId("TEST-123")
+            .dealType("SWAP")
+            .tradeDate(LocalDate.now())
+            .valueDate(LocalDate.now().plusDays(2))
+            .maturityDate(LocalDate.now().plusYears(1))
+            .status("NEW")
+            .clientId("TEST-CLIENT")
+            .instrumentId("TEST-INSTRUMENT")
+            .quantity(BigDecimal.valueOf(1000000))
+            .price(BigDecimal.valueOf(1.0))
+            .currency("USD")
+            .legs(List.of(payLeg, receiveLeg))
+            .build();
     }
 } 

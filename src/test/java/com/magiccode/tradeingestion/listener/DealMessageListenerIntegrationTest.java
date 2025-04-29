@@ -29,12 +29,15 @@ class DealMessageListenerIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private DealIngestionService dealService;
 
+    @Autowired
+    private TestDataFactory testDataFactory;
+
     private static final String TEST_QUEUE = "deals.queue";
 
     @Test
     void whenValidMessage_thenProcessDeal() throws Exception {
         // Given
-        FixedIncomeDerivativeDeal deal = TestDataFactory.createFixedIncomeDerivativeDeal();
+        FixedIncomeDerivativeDeal deal = testDataFactory.createFixedIncomeDerivativeDeal();
         String dealId = "TEST-" + System.currentTimeMillis();
         deal.setDealId(dealId);
 
@@ -65,7 +68,7 @@ class DealMessageListenerIntegrationTest extends BaseIntegrationTest {
     @Test
     void whenProcessingFails_thenSendToDlq() throws Exception {
         // Given
-        FixedIncomeDerivativeDeal deal = TestDataFactory.createFixedIncomeDerivativeDeal();
+        FixedIncomeDerivativeDeal deal = testDataFactory.createFixedIncomeDerivativeDeal();
         String invalidDealId = "INVALID-" + System.currentTimeMillis();
         deal.setDealId(invalidDealId);
         deal.setClientId(null); // This should cause validation to fail

@@ -20,17 +20,18 @@ public class DealMessageListener {
 
     private final DealIngestionService dealService;
     private final JmsTemplate jmsTemplate;
-    private static final String DLQ_DESTINATION = "deal.dlq";
+    private static final String DLQ_DESTINATION = "deals.dlq";
 
     @JmsListener(destination = "deals", containerFactory = "jmsListenerContainerFactory")
     @Retry(name = "dealProcessing")
     public void onMessage(Message message, Session session, JmsMessageHeaderAccessor headers) {
+        if (message == null) {
+            log.error("Received null message");
+            throw new IllegalArgumentException("Message cannot be null");
+        }
+
         try {
             log.info("Received deal message");
-            if (message == null) {
-                throw new IllegalArgumentException("Message cannot be null");
-            }
-            
             Deal deal = message.getBody(Deal.class);
             if (deal == null) {
                 throw new IllegalArgumentException("Deal cannot be null");
