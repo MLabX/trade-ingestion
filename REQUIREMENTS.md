@@ -74,16 +74,46 @@ This project builds a Trade Ingestion System that ingests, validates, transforms
    - Solace JMS authentication
    - Database credentials
    - Redis access control
+   - External authentication service integration
+   - JWT token validation
+   - Service-to-service authentication
 
 2. **Authorization**
-   - Role-based access
-   - Service-to-service auth
-   - API security
+   - Role-based access control (RBAC)
+   - Fine-grained permission management
+   - Context-based authorization decisions
+   - External authorization service integration
+   - Operation-level access control
+   - Resource-level access control
+   - Classification level validation
+   - Jurisdiction-based restrictions
+   - Custom attribute validation
+   - Authorization decision caching
+   - Circuit breaker protection
+   - Retry mechanism
+   - Metrics and monitoring
+   - Error handling and fallback
 
 3. **Data Protection**
    - Encryption at rest
    - Secure communication
    - Audit logging
+   - PII data masking
+   - Data classification
+   - Retention policies
+
+4. **Authorization Service Integration**
+   - REST API integration
+   - Circuit breaker protection
+   - Retry mechanism
+   - Caching of authorization decisions
+   - Metrics and monitoring
+   - Error handling and fallback
+   - Context-based authorization checks
+   - Classification level validation
+   - Jurisdiction-based restrictions
+   - Role-based access control
+   - Custom attribute validation
 
 ## Critical Behaviors
 1. **Message Ordering**
@@ -179,6 +209,15 @@ This project builds a Trade Ingestion System that ingests, validates, transforms
 - Resilience4j setup
 - Docker configuration
 - CI/CD pipeline setup
+- Authorization service implementation
+  - RBAC system
+  - Context-based authorization
+  - Operation-level access control
+  - Resource-level access control
+  - Authorization decision caching
+  - Classification level validation
+  - Jurisdiction-based restrictions
+  - Custom attribute validation
 
 🔄 In Progress:
 - Advanced validation rules
@@ -202,4 +241,81 @@ This project builds a Trade Ingestion System that ingests, validates, transforms
 - No H2 to avoid environment drift
 - System aims for production parity in tests
 - Focus on maintainability and scalability
-- Emphasis on testing and monitoring 
+- Emphasis on testing and monitoring
+
+## Message Sequencing Requirements
+
+### Core Requirements
+1. **Event Ordering**
+   - All deal events must be processed in the correct sequence
+   - Events must follow the deal lifecycle: CREATE -> MODIFY -> SETTLEMENT/CANCEL
+   - No events should be processed after CANCEL or SETTLEMENT
+   - Version numbers must be strictly increasing
+
+2. **Distributed Processing**
+   - Support multiple instances for high availability and scalability
+   - Ensure consistent ordering across all instances
+   - Prevent race conditions in distributed environment
+   - Handle network partitions and instance failures
+
+3. **Message Validation**
+   - Validate event sequence based on deal lifecycle
+   - Detect and handle duplicate messages
+   - Prevent processing of outdated messages
+   - Maintain version consistency
+
+4. **Error Handling**
+   - Stash out-of-order messages for later processing
+   - Automatic retry of stashed messages
+   - Configurable retry intervals and backoff
+   - Dead letter queue for failed messages
+
+5. **Monitoring and Metrics**
+   - Track sequence violations
+   - Monitor lock acquisition failures
+   - Measure processing latency
+   - Track message stashing and retry statistics
+
+### Technical Requirements
+1. **Distributed Locking**
+   - Use Redis for distributed locks
+   - Implement lock timeouts and automatic release
+   - Handle lock acquisition failures gracefully
+   - Support lock retry with backoff
+
+2. **State Management**
+   - Maintain deal state in Redis
+   - Track last processed version
+   - Store event sequence history
+   - Implement TTL for cleanup
+
+3. **Performance**
+   - Minimize lock contention
+   - Optimize Redis operations
+   - Support high message throughput
+   - Handle message bursts
+
+4. **Reliability**
+   - Ensure message persistence
+   - Handle Redis failures
+   - Implement circuit breakers
+   - Support graceful degradation
+
+## Additional Requirements
+1. **Monitoring**
+   - Track sequence violations
+   - Monitor lock acquisition
+   - Measure processing latency
+   - Track message stashing
+
+2. **Alerting**
+   - Alert on sequence violations
+   - Notify on lock acquisition failures
+   - Monitor retry queue size
+   - Track error rates
+
+3. **Operational**
+   - Support manual intervention
+   - Provide admin tools
+   - Enable configuration changes
+   - Support maintenance windows 

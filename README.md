@@ -11,6 +11,15 @@ A Spring Boot application for deal data ingestion with resilience patterns, cach
 - Resilience patterns (Circuit Breaker, Rate Limiter, Retry, Time Limiter)
 - Metrics and monitoring with Micrometer
 - Async processing support
+- External authentication/authorization service integration
+- Role-based access control
+- Fine-grained permission management
+- Authorization decision caching
+- Context-based authorization with:
+  - Classification level checks
+  - Jurisdiction-based restrictions
+  - Role-based access control
+  - Custom attribute validation
 
 ## Prerequisites
 
@@ -19,6 +28,7 @@ A Spring Boot application for deal data ingestion with resilience patterns, cach
 - PostgreSQL 14+
 - Redis 6+
 - Solace PubSub+ broker
+- Authentication/Authorization service
 
 ## Configuration
 
@@ -44,6 +54,32 @@ solace:
     username: your_username
     password: your_password
     vpn: your_vpn
+
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL}
+    timeout: 5000
+    retry:
+      max-attempts: 3
+      backoff: 1000
+    circuit-breaker:
+      failure-rate-threshold: 50
+      wait-duration: 5000
+    cache:
+      ttl: 300000  # 5 minutes
+    context:
+      classification-levels:
+        - PUBLIC
+        - CONFIDENTIAL
+        - SECRET
+      jurisdictions:
+        - AU
+        - US
+        - UK
+      roles:
+        - trader
+        - risk-analyst
+        - compliance
 ```
 
 ## Testing
@@ -171,67 +207,4 @@ Each integration test profile:
    ```
 
 2. Run with local profile:
-   ```bash
-   mvn spring-boot:run -Dspring.profiles.active=local
    ```
-
-#### Configuration
-The application uses the following default ports:
-- PostgreSQL: 5432
-- Solace: 55555
-- Redis: 6379
-
-All configurations can be overridden in `application-local.properties`.
-
-### Docker
-
-```bash
-# Build the Docker image
-docker build -t trade-ingestion-service .
-
-# Run the container
-docker run -p 8080:8080 \
-  -e DB_USERNAME=postgres \
-  -e DB_PASSWORD=postgres \
-  -e SOLACE_HOST=your_solace_host \
-  -e SOLACE_USERNAME=your_username \
-  -e SOLACE_PASSWORD=your_password \
-  trade-ingestion-service
-```
-
-### Kubernetes
-
-```bash
-# Apply the Kubernetes manifests
-kubectl apply -f k8s/
-```
-
-## API Endpoints
-
-- `POST /api/deals` - Create a new deal
-- `GET /api/deals/{id}` - Get a deal by ID
-- `GET /api/deals` - Get all deals
-- `GET /api/deals/symbol/{symbol}` - Get deals by symbol
-
-## Resilience Patterns
-
-The application implements several resilience patterns:
-
-- **Circuit Breaker**: Prevents cascading failures by stopping requests to failing services
-- **Rate Limiter**: Controls the rate of requests to prevent overload
-- **Retry**: Automatically retries failed operations
-- **Time Limiter**: Prevents long-running operations from blocking the system
-
-## Monitoring
-
-The application exposes several monitoring endpoints:
-
-- `/actuator/health` - Application health status
-- `/actuator/metrics` - Application metrics
-- `/actuator/circuitbreakers` - Circuit breaker status
-- `/actuator/ratelimiters` - Rate limiter status
-- `/actuator/retries` - Retry status
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
